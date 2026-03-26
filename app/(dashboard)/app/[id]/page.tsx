@@ -1,6 +1,6 @@
 import { RatingBreakdown, ReviewsList } from "@/components/rating-breakdown";
 import { AppDetailView } from "@/components/app-detail-view";
-import { getSalesData, getAppsData, getReviewsData, getAppStoreData, mergeSalesWithApps } from "@/lib/data";
+import { getSalesData, getAppsData, getReviewsData, getAppStoreData, getAppPricing, mergeSalesWithApps } from "@/lib/data";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -60,6 +60,7 @@ export default async function AppDetail({
   const iconUrl = storeData.icons[id];
   const storeRating = storeData.ratings[id];
   const storeMeta = storeData.meta[id];
+  const pricing = await getAppPricing(id, storeMeta?.price ?? 0);
 
   const hasReviews = reviews.length > 0;
   const hasStoreRating = storeRating && storeRating.count > 0;
@@ -156,6 +157,10 @@ export default async function AppDetail({
           )}
         </div>
         <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
+          <div>
+            <p className="text-xs text-text-muted">Pricing</p>
+            <p className="mt-0.5 text-text-secondary">{pricing.model}</p>
+          </div>
           {storeMeta?.genre && (
             <div>
               <p className="text-xs text-text-muted">Category</p>

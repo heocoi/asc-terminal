@@ -71,6 +71,31 @@ export async function fetchAppVersions(appId: string): Promise<unknown> {
   });
 }
 
+export async function fetchAppTerritories(appId: string): Promise<unknown> {
+  return ascFetch(`/v1/apps/${appId}/availableTerritories`, {
+    params: { limit: "1" },
+  });
+}
+
+export async function fetchAppPriceSchedule(appId: string): Promise<unknown> {
+  return ascFetch(`/v1/apps/${appId}/appPriceSchedule`, {
+    params: {
+      include: "manualPrices,automaticPrices",
+      "fields[appPrices]": "startDate",
+      "fields[appPriceTiers]": "tierNumber",
+    },
+  });
+}
+
+export async function fetchInAppPurchases(appId: string): Promise<unknown> {
+  return ascFetch(`/v1/apps/${appId}/inAppPurchasesV2`, {
+    params: {
+      "fields[inAppPurchases]": "name,productId,inAppPurchaseType,state",
+      limit: "50",
+    },
+  });
+}
+
 export async function fetchReviews(appId: string, limit = 5): Promise<unknown> {
   return ascFetch(`/v1/apps/${appId}/customerReviews`, {
     params: {

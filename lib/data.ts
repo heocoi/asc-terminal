@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
-import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews } from "./asc-client";
+import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
-import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap } from "./types";
+import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel } from "./types";
 
 interface ASCAppData {
   id: string;
@@ -291,6 +291,57 @@ export const getAppStoreData = unstable_cache(
     return { icons, ratings, meta };
   },
   ["app-store-data"],
+  { revalidate: 86400 }
+);
+
+const SUB_TYPES = new Set(["AUTO_RENEWABLE", "NON_RENEWING"]);
+
+export const getAppPricing = unstable_cache(
+  async (appId: string, storePrice: number): Promise<AppPricingModel> => {
+    let iapCount = 0;
+    let subscriptionCount = 0;
+    try {
+      const res = (await fetchInAppPurchases(appId)) as {
+        data?: { id: string; attributes: { inAppPurchaseType: string; state: string } }[]
+      };
+      const approved = (res.data || []).filter(iap => iap.attributes.state === "APPROVED");
+      subscriptionCount = approved.filter(iap => SUB_TYPES.has(iap.attributes.inAppPurchaseType)).length;
+      iapCount = approved.length - subscriptionCount;
+    } catch {
+      // IAP endpoint may fail for some apps
+    }
+
+    const isFree = storePrice === 0;
+    const hasIAP = iapCount > 0;
+    const hasSubscription = subscriptionCount > 0;
+
+    let model: string;
+    if (isFree && hasSubscription && hasIAP) {
+      model = "Free + Subscription + IAP";
+    } else if (isFree && hasSubscription) {
+      model = "Free + Subscription";
+    } else if (isFree && hasIAP) {
+      model = "Freemium";
+    } else if (isFree) {
+      model = "Free";
+    } else if (hasSubscription) {
+      model = `$${storePrice.toFixed(2)} + Subscription`;
+    } else if (hasIAP) {
+      model = `$${storePrice.toFixed(2)} + IAP`;
+    } else {
+      model = `$${storePrice.toFixed(2)}`;
+    }
+
+    return {
+      basePrice: isFree ? "Free" : `$${storePrice.toFixed(2)}`,
+      hasIAP,
+      hasSubscription,
+      iapCount,
+      subscriptionCount,
+      model,
+    };
+  },
+  ["app-pricing"],
   { revalidate: 86400 }
 );
 

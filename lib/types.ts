@@ -36,6 +36,8 @@ export interface AppDaySales {
   revenue: number;
   proceeds: number;
   parentSku?: string;
+  customerPrice?: number; // base app price from most recent download transaction
+  customerCurrency?: string;
   countries?: Record<string, { proceeds: number; downloads: number }>;
 }
 
@@ -91,10 +93,19 @@ export interface AppStoreMeta {
   price: number;
   formattedPrice: string;
   genre: string;
-  releaseDate: string; // current version release date
+  releaseDate: string;
   storeUrl: string;
 }
-export type AppStoreMetaMap = Record<string, AppStoreMeta>; // appId -> meta
+export type AppStoreMetaMap = Record<string, AppStoreMeta>;
+
+export interface AppPricingModel {
+  basePrice: string; // "Free" or "$X.XX"
+  hasIAP: boolean;
+  hasSubscription: boolean;
+  iapCount: number;
+  subscriptionCount: number;
+  model: string; // "Free", "$X.XX", "Freemium", "Free + Subscription", etc.
+}
 
 export interface AlertItem {
   type: "rejected" | "in_review" | "bad_review" | "anomaly";
