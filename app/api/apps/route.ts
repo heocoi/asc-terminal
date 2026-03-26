@@ -62,7 +62,11 @@ export async function GET() {
     const versionPromises = batch.map(async (app) => {
       try {
         const versionsRes = (await fetchAppVersions(app.id)) as { data: ASCVersionData[] };
-        const latest = versionsRes.data?.[0];
+        // Sort by createdDate descending (API doesn't support sort param)
+        const sorted = (versionsRes.data || []).sort(
+          (a, b) => new Date(b.attributes.createdDate).getTime() - new Date(a.attributes.createdDate).getTime()
+        );
+        const latest = sorted[0];
 
         const appInfo: AppInfo = {
           id: app.id,

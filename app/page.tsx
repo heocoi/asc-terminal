@@ -2,32 +2,10 @@ import { SummaryCards } from "@/components/summary-cards";
 import { RevenueChart } from "@/components/revenue-chart";
 import { DownloadsChart } from "@/components/downloads-chart";
 import { AppStatusGrid } from "@/components/app-status-grid";
-import type { DailySales, AppStatus } from "@/lib/types";
-
-async function getSales(): Promise<DailySales[]> {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/sales?days=30`, {
-    next: { revalidate: 3600 },
-  });
-  if (!res.ok) return [];
-  return res.json();
-}
-
-async function getApps(): Promise<AppStatus[]> {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/apps`, {
-    next: { revalidate: 3600 },
-  });
-  if (!res.ok) return [];
-  return res.json();
-}
+import { getSalesData, getAppsData } from "@/lib/data";
 
 export default async function Dashboard() {
-  const [sales, apps] = await Promise.all([getSales(), getApps()]);
+  const [sales, apps] = await Promise.all([getSalesData(30), getAppsData()]);
 
   return (
     <div className="space-y-6">

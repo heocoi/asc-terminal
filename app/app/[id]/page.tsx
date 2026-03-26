@@ -1,48 +1,9 @@
 import { RatingBreakdown, ReviewsList } from "@/components/rating-breakdown";
 import { RevenueChart } from "@/components/revenue-chart";
 import { DownloadsChart } from "@/components/downloads-chart";
-import type { DailySales, AppStatus, Review } from "@/lib/types";
+import { getSalesData, getAppsData, getReviewsData } from "@/lib/data";
+import type { DailySales } from "@/lib/types";
 import Link from "next/link";
-
-function getBaseUrl() {
-  return process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
-}
-
-async function getAppSales(appId: string): Promise<DailySales[]> {
-  const res = await fetch(`${getBaseUrl()}/api/sales?days=30`, {
-    next: { revalidate: 3600 },
-  });
-  if (!res.ok) return [];
-  const allSales: DailySales[] = await res.json();
-
-  // Filter to only this app's data
-  return allSales.map((day) => ({
-    date: day.date,
-    apps: day.apps[appId] ? { [appId]: day.apps[appId] } : {},
-    totalDownloads: day.apps[appId]?.downloads ?? 0,
-    totalRevenue: day.apps[appId]?.revenue ?? 0,
-    totalProceeds: day.apps[appId]?.proceeds ?? 0,
-  }));
-}
-
-async function getAppInfo(appId: string): Promise<AppStatus | null> {
-  const res = await fetch(`${getBaseUrl()}/api/apps`, {
-    next: { revalidate: 3600 },
-  });
-  if (!res.ok) return null;
-  const apps: AppStatus[] = await res.json();
-  return apps.find((a) => a.app.id === appId) ?? null;
-}
-
-async function getReviews(appId: string): Promise<Review[]> {
-  const res = await fetch(`${getBaseUrl()}/api/reviews?appId=${appId}&limit=10`, {
-    next: { revalidate: 3600 },
-  });
-  if (!res.ok) return [];
-  return res.json();
-}
 
 const STATE_LABELS: Record<string, string> = {
   READY_FOR_DISTRIBUTION: "Live",
@@ -62,23 +23,30 @@ export default async function AppDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [sales, appInfo, reviews] = await Promise.all([
-    getAppSales(id),
-    getAppInfo(id),
-    getReviews(id),
+  const [allSales, allApps, reviews] = await Promise.all([
+    getSalesData(30),
+    getAppsData(),
+    getReviewsData(id),
   ]);
 
+  const appInfo = allApps.find((a) => a.app.id === id);
   const name = appInfo?.app.name ?? "Unknown App";
   const version = appInfo?.latestVersion?.versionString ?? "?";
   const state = appInfo?.latestVersion?.state ?? "UNKNOWN";
 
+  // Filter sales to only this app
+  const sales: DailySales[] = allSales.map((day) => ({
+    date: day.date,
+    apps: day.apps[id] ? { [id]: day.apps[id] } : {},
+    totalDownloads: day.apps[id]?.downloads ?? 0,
+    totalRevenue: day.apps[id]?.revenue ?? 0,
+    totalProceeds: day.apps[id]?.proceeds ?? 0,
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link
-          href="/"
-          className="text-sm text-zinc-500 hover:text-zinc-300"
-        >
+        <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-300">
           ← Back
         </Link>
         <div>

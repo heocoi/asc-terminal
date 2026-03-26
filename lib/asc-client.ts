@@ -67,7 +67,6 @@ export async function fetchAppVersions(appId: string): Promise<unknown> {
     params: {
       "fields[appStoreVersions]": "versionString,appStoreState,platform,createdDate",
       limit: "5",
-      sort: "-createdDate",
     },
   });
 }
