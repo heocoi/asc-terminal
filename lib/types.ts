@@ -87,6 +87,15 @@ export type AppIcons = Record<string, string>; // appId -> icon URL
 
 export type AppRatings = Record<string, { avg: number; count: number }>; // appId -> rating info
 
+export interface AppStoreMeta {
+  price: number;
+  formattedPrice: string;
+  genre: string;
+  releaseDate: string; // current version release date
+  storeUrl: string;
+}
+export type AppStoreMetaMap = Record<string, AppStoreMeta>; // appId -> meta
+
 export interface AlertItem {
   type: "rejected" | "in_review" | "bad_review" | "anomaly";
   severity: "red" | "amber" | "blue";

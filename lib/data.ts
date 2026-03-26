@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
-import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings } from "./types";
+import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap } from "./types";
 
 interface ASCAppData {
   id: string;
@@ -209,11 +209,13 @@ export const getAppsData = unstable_cache(
 interface StoreLookupResult {
   icons: AppIcons;
   ratings: AppRatings;
+  meta: AppStoreMetaMap;
 }
 
 async function fetchStoreDataByCountry(ids: string, country: string): Promise<StoreLookupResult> {
   const icons: AppIcons = {};
   const ratings: AppRatings = {};
+  const meta: AppStoreMetaMap = {};
   try {
     const res = await fetch(
       `https://itunes.apple.com/lookup?id=${ids}&country=${country}&entity=software`
@@ -230,13 +232,20 @@ async function fetchStoreDataByCountry(ids: string, country: string): Promise<St
             avg: result.averageUserRating ?? 0,
             count: result.userRatingCount ?? 0,
           };
+          meta[id] = {
+            price: result.price ?? 0,
+            formattedPrice: result.formattedPrice ?? "Free",
+            genre: result.primaryGenreName ?? "",
+            releaseDate: result.currentVersionReleaseDate ?? "",
+            storeUrl: result.trackViewUrl ?? `https://apps.apple.com/app/id${id}`,
+          };
         }
       }
     }
   } catch {
     // skip
   }
-  return { icons, ratings };
+  return { icons, ratings, meta };
 }
 
 // ASC returns ISO 3166-1 alpha-3, iTunes lookup needs alpha-2
@@ -257,7 +266,7 @@ function territoryToCountry(territory: string): string {
 }
 
 export const getAppStoreData = unstable_cache(
-  async (apps: { id: string; territory: string }[]): Promise<{ icons: AppIcons; ratings: AppRatings }> => {
+  async (apps: { id: string; territory: string }[]): Promise<{ icons: AppIcons; ratings: AppRatings; meta: AppStoreMetaMap }> => {
     const byCountry: Record<string, string[]> = {};
     for (const app of apps) {
       const country = app.territory ? territoryToCountry(app.territory) : "us";
@@ -272,12 +281,14 @@ export const getAppStoreData = unstable_cache(
 
     const icons: AppIcons = {};
     const ratings: AppRatings = {};
+    const meta: AppStoreMetaMap = {};
     for (const r of results) {
       Object.assign(icons, r.icons);
       Object.assign(ratings, r.ratings);
+      Object.assign(meta, r.meta);
     }
 
-    return { icons, ratings };
+    return { icons, ratings, meta };
   },
   ["app-store-data"],
   { revalidate: 86400 }

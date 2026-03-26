@@ -59,6 +59,7 @@ export default async function AppDetail({
   const storeData = await getAppStoreData(appEntries);
   const iconUrl = storeData.icons[id];
   const storeRating = storeData.ratings[id];
+  const storeMeta = storeData.meta[id];
 
   const hasReviews = reviews.length > 0;
   const hasStoreRating = storeRating && storeRating.count > 0;
@@ -136,8 +137,49 @@ export default async function AppDetail({
 
       {/* App info */}
       <div className="border-t border-border pt-6">
-        <h2 className="section-label mb-3">App Info</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
+        <div className="flex items-center justify-between">
+          <h2 className="section-label">App Info</h2>
+          {storeMeta?.storeUrl && (
+            <a
+              href={storeMeta.storeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-surface-inset px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 6.5V9.5C9 10.05 8.55 10.5 8 10.5H2.5C1.95 10.5 1.5 10.05 1.5 9.5V4C1.5 3.45 1.95 3 2.5 3H5.5" />
+                <path d="M7.5 1.5H10.5V4.5" />
+                <path d="M5 7L10.5 1.5" />
+              </svg>
+              App Store
+            </a>
+          )}
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
+          {storeMeta?.formattedPrice && (
+            <div>
+              <p className="text-xs text-text-muted">Price</p>
+              <p className="mt-0.5 text-text-secondary">{storeMeta.formattedPrice}</p>
+            </div>
+          )}
+          {storeMeta?.genre && (
+            <div>
+              <p className="text-xs text-text-muted">Category</p>
+              <p className="mt-0.5 text-text-secondary">{storeMeta.genre}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-text-muted">Platform</p>
+            <p className="mt-0.5 text-text-secondary">{platform}</p>
+          </div>
+          {storeMeta?.releaseDate && (
+            <div>
+              <p className="text-xs text-text-muted">Last Release</p>
+              <p className="mt-0.5 text-text-secondary">
+                {new Date(storeMeta.releaseDate).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })}
+              </p>
+            </div>
+          )}
           <div>
             <p className="text-xs text-text-muted">Bundle ID</p>
             <p className="mt-0.5 truncate font-mono text-text-secondary">{appInfo?.app.bundleId}</p>
@@ -145,10 +187,6 @@ export default async function AppDetail({
           <div>
             <p className="text-xs text-text-muted">SKU</p>
             <p className="mt-0.5 font-mono text-text-secondary">{appInfo?.app.sku}</p>
-          </div>
-          <div>
-            <p className="text-xs text-text-muted">Platform</p>
-            <p className="mt-0.5 text-text-secondary">{platform}</p>
           </div>
           <div>
             <p className="text-xs text-text-muted">Locale</p>
