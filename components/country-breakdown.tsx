@@ -2,66 +2,32 @@
 
 import type { DailySales } from "@/lib/types";
 
-// Common country code -> flag + name
-const COUNTRIES: Record<string, { flag: string; name: string }> = {
-  US: { flag: "🇺🇸", name: "United States" },
-  GB: { flag: "🇬🇧", name: "United Kingdom" },
-  CA: { flag: "🇨🇦", name: "Canada" },
-  AU: { flag: "🇦🇺", name: "Australia" },
-  JP: { flag: "🇯🇵", name: "Japan" },
-  DE: { flag: "🇩🇪", name: "Germany" },
-  FR: { flag: "🇫🇷", name: "France" },
-  KR: { flag: "🇰🇷", name: "South Korea" },
-  CN: { flag: "🇨🇳", name: "China" },
-  TW: { flag: "🇹🇼", name: "Taiwan" },
-  VN: { flag: "🇻🇳", name: "Vietnam" },
-  IN: { flag: "🇮🇳", name: "India" },
-  BR: { flag: "🇧🇷", name: "Brazil" },
-  MX: { flag: "🇲🇽", name: "Mexico" },
-  IT: { flag: "🇮🇹", name: "Italy" },
-  ES: { flag: "🇪🇸", name: "Spain" },
-  NL: { flag: "🇳🇱", name: "Netherlands" },
-  SE: { flag: "🇸🇪", name: "Sweden" },
-  NO: { flag: "🇳🇴", name: "Norway" },
-  DK: { flag: "🇩🇰", name: "Denmark" },
-  CH: { flag: "🇨🇭", name: "Switzerland" },
-  RU: { flag: "🇷🇺", name: "Russia" },
-  TH: { flag: "🇹🇭", name: "Thailand" },
-  SG: { flag: "🇸🇬", name: "Singapore" },
-  MY: { flag: "🇲🇾", name: "Malaysia" },
-  ID: { flag: "🇮🇩", name: "Indonesia" },
-  PH: { flag: "🇵🇭", name: "Philippines" },
-  SA: { flag: "🇸🇦", name: "Saudi Arabia" },
-  AE: { flag: "🇦🇪", name: "UAE" },
-  TR: { flag: "🇹🇷", name: "Turkey" },
-  PL: { flag: "🇵🇱", name: "Poland" },
-  NZ: { flag: "🇳🇿", name: "New Zealand" },
-  ZA: { flag: "🇿🇦", name: "South Africa" },
-  IE: { flag: "🇮🇪", name: "Ireland" },
-  AT: { flag: "🇦🇹", name: "Austria" },
-  BE: { flag: "🇧🇪", name: "Belgium" },
-  PT: { flag: "🇵🇹", name: "Portugal" },
-  HK: { flag: "🇭🇰", name: "Hong Kong" },
-  FI: { flag: "🇫🇮", name: "Finland" },
-  CZ: { flag: "🇨🇿", name: "Czechia" },
-  IL: { flag: "🇮🇱", name: "Israel" },
-  AR: { flag: "🇦🇷", name: "Argentina" },
-  CO: { flag: "🇨🇴", name: "Colombia" },
-  CL: { flag: "🇨🇱", name: "Chile" },
+// ISO 3166-1 alpha-2 -> country name (common App Store countries)
+const COUNTRY_NAMES: Record<string, string> = {
+  US: "United States", GB: "United Kingdom", CA: "Canada", AU: "Australia",
+  JP: "Japan", DE: "Germany", FR: "France", KR: "South Korea",
+  CN: "China", TW: "Taiwan", VN: "Vietnam", IN: "India",
+  BR: "Brazil", MX: "Mexico", IT: "Italy", ES: "Spain",
+  NL: "Netherlands", SE: "Sweden", NO: "Norway", DK: "Denmark",
+  CH: "Switzerland", RU: "Russia", TH: "Thailand", SG: "Singapore",
+  MY: "Malaysia", ID: "Indonesia", PH: "Philippines", SA: "Saudi Arabia",
+  AE: "UAE", TR: "Turkey", PL: "Poland", NZ: "New Zealand",
+  ZA: "South Africa", IE: "Ireland", AT: "Austria", BE: "Belgium",
+  PT: "Portugal", HK: "Hong Kong", FI: "Finland", CZ: "Czechia",
+  IL: "Israel", AR: "Argentina", CO: "Colombia", CL: "Chile",
+  AO: "Angola", RO: "Romania", HU: "Hungary", GR: "Greece",
+  EG: "Egypt", NG: "Nigeria", KE: "Kenya", PK: "Pakistan",
+  BD: "Bangladesh", UA: "Ukraine", PE: "Peru",
 };
-
-function getCountry(code: string) {
-  return COUNTRIES[code] ?? { flag: "🏳️", name: code };
-}
 
 interface CountryData {
   code: string;
+  name: string;
   proceeds: number;
   downloads: number;
 }
 
 export function CountryBreakdown({ sales, appId }: { sales: DailySales[]; appId: string }) {
-  // Aggregate country data across all days
   const countryMap: Record<string, { proceeds: number; downloads: number }> = {};
 
   for (const day of sales) {
@@ -75,7 +41,11 @@ export function CountryBreakdown({ sales, appId }: { sales: DailySales[]; appId:
   }
 
   const countries: CountryData[] = Object.entries(countryMap)
-    .map(([code, data]) => ({ code, ...data }))
+    .map(([code, data]) => ({
+      code,
+      name: COUNTRY_NAMES[code] ?? code,
+      ...data,
+    }))
     .filter(c => c.proceeds > 0 || c.downloads > 0)
     .sort((a, b) => b.proceeds - a.proceeds || b.downloads - a.downloads);
 
@@ -93,20 +63,18 @@ export function CountryBreakdown({ sales, appId }: { sales: DailySales[]; appId:
       </div>
       <div className="space-y-1 px-5 pb-4">
         {top5.map((c) => {
-          const country = getCountry(c.code);
           const pct = totalProceeds > 0 ? (c.proceeds / totalProceeds) * 100 : 0;
           const barWidth = (c.proceeds / maxProceeds) * 100;
 
           return (
             <div key={c.code} className="group relative">
-              {/* Background bar */}
               <div
                 className="absolute inset-y-0 left-0 rounded-md bg-accent-subtle transition-all group-hover:bg-accent/8"
                 style={{ width: `${barWidth}%` }}
               />
               <div className="relative flex items-center gap-3 rounded-md px-3 py-2">
-                <span className="text-sm">{country.flag}</span>
-                <span className="flex-1 text-xs font-medium text-text-primary">{country.name}</span>
+                <span className={`fi fi-${c.code.toLowerCase()} fis`} style={{ fontSize: "16px" }} />
+                <span className="flex-1 text-xs font-medium text-text-primary">{c.name}</span>
                 <span className="font-mono text-xs tabular-nums text-text-secondary">
                   {c.proceeds > 0 ? `$${c.proceeds.toFixed(2)}` : ""}
                 </span>
