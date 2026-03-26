@@ -19,29 +19,47 @@ export default function Login() {
       router.push("/");
       router.refresh();
     } else {
-      setError("Wrong password");
+      setError("ACCESS DENIED");
     }
   }
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-xl font-bold">ASC Dashboard</h1>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none focus:border-indigo-500"
-          autoFocus
-        />
-        {error && <p className="text-sm text-red-500">{error}</p>}
-        <button
-          type="submit"
-          className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium hover:bg-indigo-500"
-        >
-          Sign in
-        </button>
+    <div className="flex min-h-[80vh] items-center justify-center">
+      <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
+        <div className="border border-term-border">
+          <div className="flex items-center gap-2 border-b border-term-border px-3 py-1.5">
+            <span className="bg-neon-green px-1.5 py-0.5 text-[10px] font-bold uppercase text-black">
+              ASC
+            </span>
+            <span className="text-[10px] uppercase tracking-widest text-term-dim">
+              Terminal Auth
+            </span>
+          </div>
+          <div className="px-3 py-4">
+            <label className="mb-1 block text-[10px] uppercase tracking-wider text-term-dim">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-term-border bg-term-bg px-2 py-1.5 text-sm text-neon-green caret-neon-green outline-none focus:border-neon-green"
+              autoFocus
+              placeholder=">"
+            />
+            {error && (
+              <p className="mt-2 text-[10px] text-neon-red">{error}</p>
+            )}
+          </div>
+          <div className="border-t border-term-border px-3 py-2">
+            <button
+              type="submit"
+              className="w-full border border-neon-green py-1 text-[10px] uppercase tracking-widest text-neon-green transition-colors hover:bg-neon-green hover:text-black"
+            >
+              Authenticate
+            </button>
+          </div>
+        </div>
       </form>
     </div>
   );

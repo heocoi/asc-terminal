@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ASC Dashboard",
-  description: "Lightweight App Store Connect Analytics Dashboard",
+  title: "ASC Terminal",
+  description: "App Store Connect Analytics Terminal",
 };
 
 export default function RootLayout({
@@ -13,8 +13,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-zinc-950 text-zinc-100 antialiased">
-        <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body>
+        <div className="mx-auto max-w-[1400px] px-3 py-4">
+          {children}
+        </div>
       </body>
     </html>
   );

@@ -1,1 +1,47 @@
 @import "tailwindcss";
+
+@theme {
+  --color-term-bg: #0a0a0a;
+  --color-term-surface: #111111;
+  --color-term-border: #1a1a1a;
+  --color-term-border-bright: #2a2a2a;
+  --color-term-text: #cccccc;
+  --color-term-dim: #555555;
+  --color-term-muted: #3a3a3a;
+  --color-neon-green: #00ff88;
+  --color-neon-cyan: #00d4ff;
+  --color-neon-amber: #ffaa00;
+  --color-neon-red: #ff3355;
+  --color-neon-purple: #aa77ff;
+  --font-family-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+}
+
+* {
+  font-family: var(--font-family-mono);
+}
+
+body {
+  background: var(--color-term-bg);
+  color: var(--color-term-text);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-term-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-term-border-bright);
+}
+
+.recharts-cartesian-axis-tick-value {
+  font-family: var(--font-family-mono) !important;
+  font-size: 10px !important;
+}
+.recharts-tooltip-wrapper {
+  font-family: var(--font-family-mono) !important;
+}
