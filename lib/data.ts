@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPricePoints } from "./asc-client";
+import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPriceSchedule, fetchIAPPricePoints } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
 import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel } from "./types";
 
@@ -317,23 +317,47 @@ export const getAppPricing = unstable_cache(
       // IAP list fetch may fail
     }
 
-    // Fetch price schedules for up to 5 IAPs in parallel
+    // Fetch actual set prices for up to 5 IAPs
+    // Strategy: get price schedule (has encoded price point ID) + all price points, then match
     if (approvedIAPs.length > 0) {
       const toFetch = approvedIAPs.slice(0, 5);
-      const priceResults = await Promise.allSettled(
-        toFetch.map(iap =>
-          fetchIAPPricePoints(iap.id, territory) as Promise<{
-            data?: { attributes?: { customerPrice?: string } }[];
-          }>
-        )
+      const results = await Promise.allSettled(
+        toFetch.map(async (iap) => {
+          // Step 1: get price schedule to find which price point is set
+          const schedule = (await fetchIAPPriceSchedule(iap.id)) as {
+            included?: { id: string; type: string }[];
+          };
+          const priceEntry = (schedule.included ?? []).find(i => i.type === "inAppPurchasePrices");
+          if (!priceEntry) return null;
+
+          // Step 2: decode base64 ID to get price point number
+          let pointNumber: string | null = null;
+          try {
+            const decoded = JSON.parse(Buffer.from(priceEntry.id, "base64").toString());
+            pointNumber = decoded.p;
+          } catch { return null; }
+          if (!pointNumber) return null;
+
+          // Step 3: get all price points for territory, find matching one
+          const points = (await fetchIAPPricePoints(iap.id, territory)) as {
+            data?: { id: string; attributes?: { customerPrice?: string } }[];
+          };
+          for (const pp of points.data ?? []) {
+            try {
+              const decoded = JSON.parse(Buffer.from(pp.id, "base64").toString());
+              if (decoded.p === pointNumber) {
+                return parseFloat(pp.attributes?.customerPrice ?? "0");
+              }
+            } catch { continue; }
+          }
+          return null;
+        })
       );
-      for (const result of priceResults) {
-        if (result.status === "fulfilled" && result.value.data?.length) {
-          const price = parseFloat(result.value.data[0].attributes?.customerPrice ?? "0");
-          if (!isNaN(price) && price > 0) {
-            if (minIAPPrice === null || price < minIAPPrice) {
-              minIAPPrice = price;
-            }
+
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value && result.value > 0) {
+          if (minIAPPrice === null || result.value < minIAPPrice) {
+            minIAPPrice = result.value;
           }
         }
       }
