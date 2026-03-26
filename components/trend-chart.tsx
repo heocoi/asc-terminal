@@ -175,6 +175,7 @@ export function TrendChart({ data }: { data: DailySales[] }) {
                 tickLine={false}
                 axisLine={false}
                 tick={{ fontSize: 10, fill: "#B0AAA2" }}
+                allowDecimals={false}
                 width={35}
               />
               <Tooltip content={<CustomTooltip metric={metric} />} />
@@ -194,8 +195,8 @@ export function TrendChart({ data }: { data: DailySales[] }) {
         </ResponsiveContainer>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border px-5 py-3">
+      {/* Legend - hide for single app */}
+      {allKeys.length > 1 && <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border px-5 py-3">
         {allKeys.map((id, i) => (
           <span key={id} className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
             <span
@@ -205,7 +206,7 @@ export function TrendChart({ data }: { data: DailySales[] }) {
             {id === "__other" ? `Other (${rest.length})` : appNames[id]}
           </span>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { RatingBreakdown, ReviewsList } from "@/components/rating-breakdown";
-import { RevenueChart } from "@/components/revenue-chart";
-import { DownloadsChart } from "@/components/downloads-chart";
+import { TrendChart } from "@/components/trend-chart";
 import { getSalesData, getAppsData, getReviewsData, getAppStoreData, mergeSalesWithApps } from "@/lib/data";
 import type { DailySales } from "@/lib/types";
 import Image from "next/image";
@@ -29,6 +28,13 @@ const STATE_COLOR: Record<string, string> = {
   "Meta Rejected": "text-negative-text bg-negative-bg",
 };
 
+const PLATFORM_SHORT: Record<string, string> = {
+  IOS: "iOS",
+  MAC_OS: "macOS",
+  APPLE_TV: "tvOS",
+  VISION_OS: "visionOS",
+};
+
 export default async function AppDetail({
   params,
 }: {
@@ -48,12 +54,12 @@ export default async function AppDetail({
   const state = appInfo?.latestVersion?.state ?? "UNKNOWN";
   const stateLabel = STATE_LABEL[state] ?? state;
   const stateColor = STATE_COLOR[stateLabel] ?? "text-text-muted bg-surface-inset";
+  const platform = PLATFORM_SHORT[appInfo?.app.platformDisplay ?? ""] ?? appInfo?.app.platformDisplay ?? "";
 
-  // Get icon
   const appEntries = allApps.map((a) => ({ id: a.app.id, territory: a.app.territory }));
   const storeData = await getAppStoreData(appEntries);
   const iconUrl = storeData.icons[id];
-  const rating = storeData.ratings[id];
+  const storeRating = storeData.ratings[id];
 
   const sales: DailySales[] = allSales.map((day) => ({
     date: day.date,
@@ -66,6 +72,19 @@ export default async function AppDetail({
   const totalProceeds = sales.reduce((s, d) => s + d.totalProceeds, 0);
   const totalDownloads = sales.reduce((s, d) => s + d.totalDownloads, 0);
 
+  const firstDate = sales[0]?.date ?? "";
+  const lastDate = sales[sales.length - 1]?.date ?? "";
+
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const fmtShort = (d: string) => {
+    const [, m, day] = d.split("-");
+    return `${MONTHS[parseInt(m, 10) - 1]} ${parseInt(day, 10)}`;
+  };
+  const dateRange = firstDate && lastDate ? `${fmtShort(firstDate)} - ${fmtShort(lastDate)}` : "";
+
+  const hasReviews = reviews.length > 0;
+  const hasStoreRating = storeRating && storeRating.count > 0;
+
   return (
     <div className="space-y-8">
       {/* Back nav */}
@@ -76,7 +95,7 @@ export default async function AppDetail({
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M8.5 3L4.5 7L8.5 11" />
         </svg>
-        Back
+        Dashboard
       </Link>
 
       {/* App header */}
@@ -97,57 +116,89 @@ export default async function AppDetail({
         <div>
           <h1 className="text-xl font-bold tracking-tight text-text-primary">{name}</h1>
           <div className="mt-1 flex items-center gap-2 text-sm text-text-tertiary">
-            <span>v{version}</span>
+            <span>{platform}</span>
             <span className="text-text-faint">·</span>
+            <span>v{version}</span>
             <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${stateColor}`}>
               {stateLabel}
             </span>
-            {rating && rating.count > 0 && (
+            {hasStoreRating && (
               <>
                 <span className="text-text-faint">·</span>
-                <span className="text-warning-text">{rating.avg.toFixed(1)}★</span>
-                <span className="text-text-muted">({rating.count})</span>
+                <span className="text-warning-text">{storeRating.avg.toFixed(1)}★</span>
+                <span className="text-text-muted">({storeRating.count})</span>
               </>
             )}
           </div>
         </div>
       </div>
 
-      {/* Quick stats */}
-      <div className="animate-fade-up grid grid-cols-3 gap-4" style={{ animationDelay: "0.06s" }}>
+      {/* Stats */}
+      <div className="animate-fade-up grid grid-cols-2 gap-3" style={{ animationDelay: "0.06s" }}>
         <div className="card rounded-xl px-5 py-4">
-          <p className="section-label">30D Revenue</p>
+          <p className="section-label">Revenue</p>
           <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-text-primary">
             ${totalProceeds.toFixed(2)}
           </p>
+          <p className="mt-1 text-[11px] text-text-muted">{dateRange}</p>
         </div>
         <div className="card rounded-xl px-5 py-4">
-          <p className="section-label">30D Downloads</p>
+          <p className="section-label">Downloads</p>
           <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-text-primary">
             {totalDownloads}
           </p>
-        </div>
-        <div className="card rounded-xl px-5 py-4">
-          <p className="section-label">Bundle ID</p>
-          <p className="mt-2 truncate font-mono text-sm text-text-secondary">
-            {appInfo?.app.bundleId}
-          </p>
+          <p className="mt-1 text-[11px] text-text-muted">{dateRange}</p>
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <RevenueChart data={sales} />
-        <DownloadsChart data={sales} />
-      </div>
+      {/* Chart - reuse TrendChart */}
+      <TrendChart data={sales} />
 
-      {/* Reviews */}
-      <div>
-        <h2 className="section-label mb-3">Reviews</h2>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <RatingBreakdown reviews={reviews} />
-          <div className="lg:col-span-2">
-            <ReviewsList reviews={reviews} />
+      {/* Reviews - only show if there are reviews or store rating */}
+      {(hasReviews || hasStoreRating) && (
+        <div>
+          <h2 className="section-label mb-3">Reviews</h2>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {hasReviews ? (
+              <RatingBreakdown reviews={reviews} />
+            ) : hasStoreRating ? (
+              <div className="card rounded-xl px-5 py-4">
+                <p className="section-label">App Store Rating</p>
+                <div className="mt-3 flex items-baseline gap-1.5">
+                  <span className="font-mono text-3xl font-bold text-text-primary">
+                    {storeRating.avg.toFixed(1)}
+                  </span>
+                  <span className="text-sm text-text-muted">/ 5</span>
+                </div>
+                <p className="mt-1 text-xs text-text-muted">{storeRating.count} ratings</p>
+              </div>
+            ) : null}
+            <div className="lg:col-span-2">
+              <ReviewsList reviews={reviews} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* App info - secondary */}
+      <div className="border-t border-border pt-6">
+        <h2 className="section-label mb-3">App Info</h2>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
+          <div>
+            <p className="text-xs text-text-muted">Bundle ID</p>
+            <p className="mt-0.5 truncate font-mono text-text-secondary">{appInfo?.app.bundleId}</p>
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">SKU</p>
+            <p className="mt-0.5 font-mono text-text-secondary">{appInfo?.app.sku}</p>
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">Platform</p>
+            <p className="mt-0.5 text-text-secondary">{platform}</p>
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">Locale</p>
+            <p className="mt-0.5 text-text-secondary">{appInfo?.app.primaryLocale}</p>
           </div>
         </div>
       </div>

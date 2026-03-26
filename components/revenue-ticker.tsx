@@ -115,7 +115,9 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
   const prev = prevMonthRange(lastDate);
   const prevMonthData = filterRange(data, prev.start, prev.end);
   const prevMonthRevenue = prevMonthData.reduce((s, d) => s + d.totalProceeds, 0);
-  const monthName = new Date(lastDate).toLocaleString("en", { month: "long" });
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const monthName = MONTHS_LONG[parseInt(lastDate.split("-")[1], 10) - 1];
 
   const animatedRevenue = useCountUp(latestRevenue);
 
@@ -128,9 +130,12 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
   // Sparkline from last 14 days
   const sparkValues = data.slice(-14).map(d => d.totalProceeds);
 
-  // Format helpers
-  const fmtShort = (d: string) => new Date(d).toLocaleDateString("en", { month: "short", day: "numeric" });
-  const fmtMonthDay = (d: string) => new Date(d).toLocaleDateString("en", { day: "numeric" });
+  // Format helpers - parse string directly to avoid timezone shift
+  const fmtShort = (d: string) => {
+    const [, m, day] = d.split("-");
+    return `${MONTHS[parseInt(m, 10) - 1]} ${parseInt(day, 10)}`;
+  };
+  const fmtMonthDay = (d: string) => String(parseInt(d.split("-")[2], 10));
 
   return (
     <div className="animate-fade-up">
