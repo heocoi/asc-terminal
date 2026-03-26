@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Review } from "@/lib/types";
 
 export function RatingBreakdown({ reviews }: { reviews: Review[] }) {
@@ -47,6 +48,8 @@ export function RatingBreakdown({ reviews }: { reviews: Review[] }) {
 }
 
 export function ReviewsList({ reviews }: { reviews: Review[] }) {
+  const [filter, setFilter] = useState<"all" | "negative">("all");
+
   if (reviews.length === 0) {
     return (
       <div className="card flex items-center justify-center rounded-xl px-5 py-12 text-sm text-text-muted">
@@ -55,26 +58,61 @@ export function ReviewsList({ reviews }: { reviews: Review[] }) {
     );
   }
 
+  const filtered = filter === "negative" ? reviews.filter(r => r.rating <= 2) : reviews;
+  const negCount = reviews.filter(r => r.rating <= 2).length;
+
   return (
     <div className="card divide-y divide-border rounded-xl">
-      {reviews.map((r) => (
-        <div key={r.id} className="px-5 py-4">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-warning-text">
-              {"★".repeat(r.rating)}
-              <span className="text-text-faint">{"★".repeat(5 - r.rating)}</span>
-            </span>
-            <span className="text-text-muted">{r.territory}</span>
-            <span className="text-text-faint">·</span>
-            <span className="text-text-muted">
-              {new Date(r.createdDate).toLocaleDateString("en-CA")}
-            </span>
-          </div>
-          <p className="mt-2 text-sm font-semibold text-text-primary">{r.title}</p>
-          <p className="mt-1 text-sm leading-relaxed text-text-secondary">{r.body}</p>
-          <p className="mt-2 text-[11px] text-text-muted">{r.reviewerNickname}</p>
+      {/* Filter bar */}
+      <div className="flex items-center gap-2 px-5 py-3">
+        <div className="flex gap-0.5 rounded-lg bg-surface-inset p-0.5">
+          <button
+            onClick={() => setFilter("all")}
+            className={`rounded-md px-3 py-1 text-xs font-semibold transition-all ${
+              filter === "all"
+                ? "bg-surface text-text-primary shadow-sm"
+                : "text-text-muted hover:text-text-secondary"
+            }`}
+          >
+            All ({reviews.length})
+          </button>
+          <button
+            onClick={() => setFilter("negative")}
+            className={`rounded-md px-3 py-1 text-xs font-semibold transition-all ${
+              filter === "negative"
+                ? "bg-surface text-text-primary shadow-sm"
+                : "text-text-muted hover:text-text-secondary"
+            }`}
+          >
+            1-2★ ({negCount})
+          </button>
         </div>
-      ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="px-5 py-8 text-center text-sm text-text-muted">
+          No negative reviews
+        </div>
+      ) : (
+        filtered.map((r) => (
+          <div key={r.id} className="px-5 py-4">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-warning-text">
+                {"★".repeat(r.rating)}
+                <span className="text-text-faint">{"★".repeat(5 - r.rating)}</span>
+              </span>
+              <span className="text-text-muted">{r.territory}</span>
+              <span className="text-text-faint">·</span>
+              <span className="text-text-muted">
+                {new Date(r.createdDate).toLocaleDateString("en-CA")}
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-text-primary">{r.title}</p>
+            <p className="mt-1 text-sm leading-relaxed text-text-secondary">{r.body}</p>
+            <p className="mt-2 text-[11px] text-text-muted">{r.reviewerNickname}</p>
+          </div>
+        ))
+      )}
     </div>
   );
 }

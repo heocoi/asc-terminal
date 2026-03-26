@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
-import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchReviews } from "./asc-client";
+import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
-import type { DailySales, AppStatus, AppInfo, AppVersion, Review } from "./types";
+import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings } from "./types";
 
 interface ASCAppData {
   id: string;
@@ -87,6 +87,63 @@ export const getSalesData = unstable_cache(
   { revalidate: 3600 }
 );
 
+// Merge IAP/subscription revenue into parent apps using SKU -> app ID mapping
+export function mergeSalesWithApps(sales: DailySales[], apps: AppStatus[]): DailySales[] {
+  // Build SKU -> Apple ID lookup from apps data
+  const skuToId: Record<string, string> = {};
+  for (const app of apps) {
+    if (app.app.sku) {
+      skuToId[app.app.sku] = app.app.id;
+    }
+  }
+
+  return sales.map((day) => {
+    const merged: DailySales["apps"] = {};
+
+    for (const [id, entry] of Object.entries(day.apps)) {
+      // If entry has a parentSku, try to find the parent app ID
+      const parentId = entry.parentSku ? skuToId[entry.parentSku] : null;
+      const targetId = parentId ?? id;
+
+      if (!merged[targetId]) {
+        merged[targetId] = { title: entry.title, downloads: 0, updates: 0, revenue: 0, proceeds: 0, countries: {} };
+      }
+
+      const target = merged[targetId];
+      target.downloads += entry.downloads;
+      target.updates += entry.updates;
+      target.revenue += entry.revenue;
+      target.proceeds += entry.proceeds;
+
+      // Merge country data
+      if (entry.countries) {
+        for (const [cc, data] of Object.entries(entry.countries)) {
+          if (!target.countries![cc]) target.countries![cc] = { proceeds: 0, downloads: 0 };
+          target.countries![cc].proceeds += data.proceeds;
+          target.countries![cc].downloads += data.downloads;
+        }
+      }
+
+      // Keep parent app title, not IAP product name
+      if (!parentId) {
+        target.title = entry.title;
+      }
+    }
+
+    // Recalculate totals
+    let totalDownloads = 0;
+    let totalRevenue = 0;
+    let totalProceeds = 0;
+    for (const entry of Object.values(merged)) {
+      totalDownloads += entry.downloads;
+      totalRevenue += entry.revenue;
+      totalProceeds += entry.proceeds;
+    }
+
+    return { date: day.date, apps: merged, totalDownloads, totalRevenue, totalProceeds };
+  });
+}
+
 export const getAppsData = unstable_cache(
   async (): Promise<AppStatus[]> => {
     const appsResponse = (await fetchAllApps()) as { data: ASCAppData[] };
@@ -97,11 +154,18 @@ export const getAppsData = unstable_cache(
       const batch = apps.slice(i, i + 10);
       const versionPromises = batch.map(async (app) => {
         try {
-          const versionsRes = (await fetchAppVersions(app.id)) as { data: ASCVersionData[] };
-          const sorted = (versionsRes.data || []).sort(
+          const [versionsRes, territoriesRes] = await Promise.allSettled([
+            fetchAppVersions(app.id) as Promise<{ data: ASCVersionData[] }>,
+            fetchAppTerritories(app.id) as Promise<{ data: { id: string }[] }>,
+          ]);
+          const versions = versionsRes.status === "fulfilled" ? versionsRes.value.data || [] : [];
+          const sorted = versions.sort(
             (a, b) => new Date(b.attributes.createdDate).getTime() - new Date(a.attributes.createdDate).getTime()
           );
           const latest = sorted[0];
+          const territory = territoriesRes.status === "fulfilled"
+            ? territoriesRes.value.data?.[0]?.id ?? ""
+            : "";
 
           const appInfo: AppInfo = {
             id: app.id,
@@ -110,6 +174,7 @@ export const getAppsData = unstable_cache(
             sku: app.attributes.sku,
             primaryLocale: app.attributes.primaryLocale,
             platformDisplay: latest?.attributes.platform || "unknown",
+            territory,
           };
 
           const latestVersion: AppVersion | null = latest
@@ -125,7 +190,7 @@ export const getAppsData = unstable_cache(
           return { app: appInfo, latestVersion, health: latest ? getHealth(latest.attributes.appStoreState) : "unknown" } as AppStatus;
         } catch {
           return {
-            app: { id: app.id, name: app.attributes.name, bundleId: app.attributes.bundleId, sku: app.attributes.sku, primaryLocale: app.attributes.primaryLocale, platformDisplay: "unknown" },
+            app: { id: app.id, name: app.attributes.name, bundleId: app.attributes.bundleId, sku: app.attributes.sku, primaryLocale: app.attributes.primaryLocale, platformDisplay: "unknown", territory: "" },
             latestVersion: null,
             health: "unknown",
           } as AppStatus;
@@ -139,6 +204,83 @@ export const getAppsData = unstable_cache(
   },
   ["apps-data"],
   { revalidate: 3600 }
+);
+
+interface StoreLookupResult {
+  icons: AppIcons;
+  ratings: AppRatings;
+}
+
+async function fetchStoreDataByCountry(ids: string, country: string): Promise<StoreLookupResult> {
+  const icons: AppIcons = {};
+  const ratings: AppRatings = {};
+  try {
+    const res = await fetch(
+      `https://itunes.apple.com/lookup?id=${ids}&country=${country}&entity=software`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      for (const result of data.results ?? []) {
+        const id = String(result.trackId);
+        if (result.trackId && result.artworkUrl100) {
+          icons[id] = result.artworkUrl100;
+        }
+        if (result.trackId) {
+          ratings[id] = {
+            avg: result.averageUserRating ?? 0,
+            count: result.userRatingCount ?? 0,
+          };
+        }
+      }
+    }
+  } catch {
+    // skip
+  }
+  return { icons, ratings };
+}
+
+// ASC returns ISO 3166-1 alpha-3, iTunes lookup needs alpha-2
+const ALPHA3_TO_ALPHA2: Record<string, string> = {
+  USA: "us", GBR: "gb", CAN: "ca", AUS: "au", VNM: "vn", JPN: "jp",
+  KOR: "kr", CHN: "cn", TWN: "tw", FRA: "fr", DEU: "de", ESP: "es",
+  MEX: "mx", BRA: "br", ITA: "it", NLD: "nl", RUS: "ru", THA: "th",
+  IDN: "id", MYS: "my", SGP: "sg", PHL: "ph", IND: "in", SAU: "sa",
+  ARE: "ae", TUR: "tr", POL: "pl", SWE: "se", NOR: "no", DNK: "dk",
+  FIN: "fi", CHE: "ch", AUT: "at", BEL: "be", PRT: "pt", IRL: "ie",
+  NZL: "nz", ZAF: "za", ARG: "ar", COL: "co", CHL: "cl", PER: "pe",
+  UKR: "ua", ROU: "ro", CZE: "cz", HUN: "hu", GRC: "gr", ISR: "il",
+  EGY: "eg", NGA: "ng", KEN: "ke", PAK: "pk", BGD: "bd", HKG: "hk",
+};
+
+function territoryToCountry(territory: string): string {
+  return ALPHA3_TO_ALPHA2[territory] ?? "us";
+}
+
+export const getAppStoreData = unstable_cache(
+  async (apps: { id: string; territory: string }[]): Promise<{ icons: AppIcons; ratings: AppRatings }> => {
+    const byCountry: Record<string, string[]> = {};
+    for (const app of apps) {
+      const country = app.territory ? territoryToCountry(app.territory) : "us";
+      (byCountry[country] ??= []).push(app.id);
+    }
+
+    const results = await Promise.all(
+      Object.entries(byCountry).map(([country, ids]) =>
+        fetchStoreDataByCountry(ids.join(","), country)
+      )
+    );
+
+    const icons: AppIcons = {};
+    const ratings: AppRatings = {};
+    for (const r of results) {
+      Object.assign(icons, r.icons);
+      Object.assign(ratings, r.ratings);
+    }
+
+    return { icons, ratings };
+  },
+  ["app-store-data"],
+  { revalidate: 86400 }
 );
 
 export const getReviewsData = unstable_cache(
@@ -155,5 +297,129 @@ export const getReviewsData = unstable_cache(
     }));
   },
   ["reviews-data"],
+  { revalidate: 3600 }
+);
+
+const REJECTION_STATES = new Set(["REJECTED", "DEVELOPER_REJECTED", "METADATA_REJECTED", "INVALID_BINARY"]);
+const REVIEW_STATES = new Set(["WAITING_FOR_REVIEW", "IN_REVIEW"]);
+
+export function getAlerts(apps: AppStatus[], sales: DailySales[]): AlertItem[] {
+  const alerts: AlertItem[] = [];
+
+  for (const app of apps) {
+    const state = app.latestVersion?.state ?? "";
+    const ver = app.latestVersion?.versionString ?? "?";
+
+    // Rejected builds (red)
+    if (REJECTION_STATES.has(state)) {
+      const stateLabel: Record<string, string> = {
+        REJECTED: "Rejected by App Review",
+        DEVELOPER_REJECTED: "Rejected by developer",
+        METADATA_REJECTED: "Metadata rejected",
+        INVALID_BINARY: "Invalid binary",
+      };
+      alerts.push({
+        type: "rejected",
+        severity: "red",
+        title: app.app.name,
+        detail: `v${ver} - ${stateLabel[state] ?? state}`,
+        appId: app.app.id,
+        appName: app.app.name,
+        version: ver,
+        timestamp: app.latestVersion?.createdDate,
+      });
+    }
+
+    // Waiting for review / in review (blue - informational)
+    if (REVIEW_STATES.has(state)) {
+      alerts.push({
+        type: "in_review",
+        severity: "blue",
+        title: app.app.name,
+        detail: `v${ver} - ${state === "IN_REVIEW" ? "In review" : "Waiting for review"}`,
+        appId: app.app.id,
+        appName: app.app.name,
+        version: ver,
+        timestamp: app.latestVersion?.createdDate,
+      });
+    }
+  }
+
+  // Download anomalies
+  if (sales.length >= 10) {
+    const recent3 = sales.slice(-3);
+    const prior7 = sales.slice(-10, -3);
+    const recentAvg = recent3.reduce((s, d) => s + d.totalDownloads, 0) / 3;
+    const priorAvg = prior7.reduce((s, d) => s + d.totalDownloads, 0) / 7;
+    if (priorAvg > 0) {
+      const dropPct = ((priorAvg - recentAvg) / priorAvg) * 100;
+      if (dropPct > 40) {
+        alerts.push({
+          type: "anomaly",
+          severity: "amber",
+          title: "Download drop",
+          detail: `${dropPct.toFixed(0)}% drop vs prior week (${recentAvg.toFixed(0)}/day vs ${priorAvg.toFixed(0)}/day)`,
+        });
+      }
+      const spikePct = ((recentAvg - priorAvg) / priorAvg) * 100;
+      if (spikePct > 100) {
+        alerts.push({
+          type: "anomaly",
+          severity: "amber",
+          title: "Download spike",
+          detail: `+${spikePct.toFixed(0)}% vs prior week (${recentAvg.toFixed(0)}/day vs ${priorAvg.toFixed(0)}/day)`,
+        });
+      }
+    }
+  }
+
+  // Sort: red first, then amber, then blue
+  const severityOrder = { red: 0, amber: 1, blue: 2 };
+  alerts.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+  return alerts;
+}
+
+export const getRecentBadReviews = unstable_cache(
+  async (apps: AppStatus[]): Promise<Review[]> => {
+    const badReviews: Review[] = [];
+    // Fetch 3 recent reviews per app, filter to 1-2 stars
+    const batches = [];
+    for (let i = 0; i < apps.length; i += 10) {
+      batches.push(apps.slice(i, i + 10));
+    }
+
+    for (const batch of batches) {
+      const results = await Promise.all(
+        batch.map(async (app) => {
+          try {
+            const res = (await fetchReviews(app.app.id, 5)) as { data: ASCReviewData[] };
+            return (res.data || [])
+              .filter((r) => r.attributes.rating <= 2)
+              .slice(0, 3)
+              .map((r) => ({
+                id: r.id,
+                title: r.attributes.title,
+                body: r.attributes.body,
+                rating: r.attributes.rating,
+                reviewerNickname: r.attributes.reviewerNickname,
+                createdDate: r.attributes.createdDate,
+                territory: r.attributes.territory,
+                appName: app.app.name,
+                appId: app.app.id,
+              }));
+          } catch {
+            return [];
+          }
+        })
+      );
+      badReviews.push(...results.flat());
+    }
+
+    return badReviews
+      .sort((a, b) => b.createdDate.localeCompare(a.createdDate))
+      .slice(0, 10);
+  },
+  ["bad-reviews"],
   { revalidate: 3600 }
 );

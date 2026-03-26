@@ -29,18 +29,19 @@ export interface SalesRecord {
   orderType: string;
 }
 
+export interface AppDaySales {
+  title: string;
+  downloads: number;
+  updates: number;
+  revenue: number;
+  proceeds: number;
+  parentSku?: string;
+  countries?: Record<string, { proceeds: number; downloads: number }>;
+}
+
 export interface DailySales {
   date: string;
-  apps: Record<
-    string,
-    {
-      title: string;
-      downloads: number;
-      updates: number;
-      revenue: number;
-      proceeds: number;
-    }
-  >;
+  apps: Record<string, AppDaySales>;
   totalDownloads: number;
   totalRevenue: number;
   totalProceeds: number;
@@ -53,6 +54,7 @@ export interface AppInfo {
   sku: string;
   primaryLocale: string;
   platformDisplay: string;
+  territory: string; // ISO 3166-1 alpha-3 from ASC (e.g. "USA", "VNM")
 }
 
 export interface AppVersion {
@@ -77,4 +79,21 @@ export interface Review {
   reviewerNickname: string;
   createdDate: string;
   territory: string;
+  appName?: string;
+  appId?: string;
+}
+
+export type AppIcons = Record<string, string>; // appId -> icon URL
+
+export type AppRatings = Record<string, { avg: number; count: number }>; // appId -> rating info
+
+export interface AlertItem {
+  type: "rejected" | "in_review" | "bad_review" | "anomaly";
+  severity: "red" | "amber" | "blue";
+  title: string;
+  detail: string;
+  appId?: string;
+  appName?: string;
+  version?: string;
+  timestamp?: string;
 }

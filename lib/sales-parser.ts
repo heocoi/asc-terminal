@@ -60,7 +60,7 @@ export function aggregateSales(records: SalesRecord[], date: string): DailySales
   for (const r of records) {
     const key = r.appleIdentifier;
     if (!apps[key]) {
-      apps[key] = { title: r.title, downloads: 0, updates: 0, revenue: 0, proceeds: 0 };
+      apps[key] = { title: r.title, downloads: 0, updates: 0, revenue: 0, proceeds: 0, parentSku: r.parentIdentifier?.trim() || "", countries: {} };
     }
 
     const entry = apps[key];
@@ -80,6 +80,12 @@ export function aggregateSales(records: SalesRecord[], date: string): DailySales
     entry.proceeds += proceeds;
     totalRevenue += revenue;
     totalProceeds += proceeds;
+
+    // Track per-country
+    const cc = r.countryCode || "??";
+    if (!entry.countries![cc]) entry.countries![cc] = { proceeds: 0, downloads: 0 };
+    entry.countries![cc].proceeds += proceeds;
+    if (isDownload) entry.countries![cc].downloads += r.units;
   }
 
   return { date, apps, totalDownloads, totalRevenue, totalProceeds };
