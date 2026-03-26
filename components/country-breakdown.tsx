@@ -73,7 +73,7 @@ export function CountryBreakdown({ sales, appId }: { sales: DailySales[]; appId:
                 style={{ width: `${barWidth}%` }}
               />
               <div className="relative flex items-center gap-3 rounded-md px-3 py-2">
-                <span className={`fi fi-${c.code.toLowerCase()} fis`} style={{ fontSize: "16px" }} />
+                <span className={`fi fi-${c.code.toLowerCase()}`} style={{ fontSize: "12px", borderRadius: "2px", overflow: "hidden" }} />
                 <span className="flex-1 text-xs font-medium text-text-primary">{c.name}</span>
                 <span className="font-mono text-xs tabular-nums text-text-secondary">
                   {c.proceeds > 0 ? `$${c.proceeds.toFixed(2)}` : ""}
