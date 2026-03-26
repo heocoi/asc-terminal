@@ -11,32 +11,32 @@ export function RatingBreakdown({ reviews }: { reviews: Review[] }) {
   const avg = total > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / total : 0;
 
   return (
-    <div className="border border-term-border">
-      <div className="flex items-center justify-between border-b border-term-border px-3 py-1.5">
-        <span className="text-[10px] uppercase tracking-widest text-term-dim">Ratings</span>
-        <span className="text-[10px] text-term-dim">{total} reviews</span>
+    <div className="card rounded-xl">
+      <div className="flex items-center justify-between px-5 py-4">
+        <h3 className="section-label">Rating</h3>
+        <span className="text-[11px] text-text-muted">{total} reviews</span>
       </div>
-      <div className="px-3 py-3">
-        <div className="mb-3 flex items-baseline gap-2">
-          <span className="text-2xl font-bold tabular-nums text-neon-amber">
+      <div className="px-5 pb-5">
+        <div className="mb-4 flex items-baseline gap-1.5">
+          <span className="font-mono text-3xl font-bold text-text-primary">
             {avg.toFixed(1)}
           </span>
-          <span className="text-[10px] text-term-dim">/ 5.0</span>
+          <span className="text-sm text-text-muted">/ 5</span>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-2">
           {[5, 4, 3, 2, 1].map((star) => {
             const count = counts[star - 1];
             const pct = total > 0 ? (count / total) * 100 : 0;
             return (
-              <div key={star} className="flex items-center gap-2 text-[11px]">
-                <span className="w-3 text-term-dim">{star}</span>
-                <div className="h-1.5 flex-1 bg-term-border">
+              <div key={star} className="flex items-center gap-2.5 text-xs">
+                <span className="w-3 text-right font-mono text-text-tertiary">{star}</span>
+                <div className="h-1.5 flex-1 rounded-full bg-surface-inset">
                   <div
-                    className="h-full bg-neon-amber"
-                    style={{ width: `${pct}%` }}
+                    className="h-full rounded-full bg-accent transition-all"
+                    style={{ width: `${pct}%`, opacity: 0.5 + (star / 10) }}
                   />
                 </div>
-                <span className="w-5 text-right tabular-nums text-term-dim">{count}</span>
+                <span className="w-5 text-right font-mono tabular-nums text-text-muted">{count}</span>
               </div>
             );
           })}
@@ -49,32 +49,30 @@ export function RatingBreakdown({ reviews }: { reviews: Review[] }) {
 export function ReviewsList({ reviews }: { reviews: Review[] }) {
   if (reviews.length === 0) {
     return (
-      <div className="border border-term-border px-3 py-6 text-center text-[11px] text-term-dim">
-        NO REVIEWS
+      <div className="card flex items-center justify-center rounded-xl px-5 py-12 text-sm text-text-muted">
+        No reviews yet
       </div>
     );
   }
 
   return (
-    <div className="border border-term-border">
-      {reviews.map((r, i) => (
-        <div
-          key={r.id}
-          className={`px-3 py-2 ${i > 0 ? "border-t border-term-border" : ""}`}
-        >
-          <div className="flex items-center gap-2 text-[10px]">
-            <span className="text-neon-amber">
+    <div className="card divide-y divide-border rounded-xl">
+      {reviews.map((r) => (
+        <div key={r.id} className="px-5 py-4">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-warning-text">
               {"★".repeat(r.rating)}
-              <span className="text-term-muted">{"★".repeat(5 - r.rating)}</span>
+              <span className="text-text-faint">{"★".repeat(5 - r.rating)}</span>
             </span>
-            <span className="text-term-dim">{r.territory}</span>
-            <span className="text-term-muted">
+            <span className="text-text-muted">{r.territory}</span>
+            <span className="text-text-faint">·</span>
+            <span className="text-text-muted">
               {new Date(r.createdDate).toLocaleDateString("en-CA")}
             </span>
           </div>
-          <p className="mt-1 text-[12px] font-medium text-term-text">{r.title}</p>
-          <p className="mt-0.5 text-[11px] text-term-dim leading-relaxed">{r.body}</p>
-          <p className="mt-1 text-[10px] text-term-muted">{r.reviewerNickname}</p>
+          <p className="mt-2 text-sm font-semibold text-text-primary">{r.title}</p>
+          <p className="mt-1 text-sm leading-relaxed text-text-secondary">{r.body}</p>
+          <p className="mt-2 text-[11px] text-text-muted">{r.reviewerNickname}</p>
         </div>
       ))}
     </div>

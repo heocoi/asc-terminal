@@ -1,19 +1,38 @@
 "use client";
 
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import type { DailySales } from "@/lib/types";
 
-const COLORS = [
-  "#00ff88", "#00d4ff", "#ffaa00", "#ff3355", "#aa77ff",
-  "#ff6b9d", "#00e5a0", "#ff8844", "#44ccff", "#88ff44",
+// Distinguishable but harmonious palette
+const CHART_COLORS = [
+  "#4F46E5", "#0EA5E9", "#10B981", "#F59E0B", "#EC4899",
+  "#8B5CF6", "#06B6D4", "#84CC16", "#F97316", "#6366F1",
 ];
+
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
+  if (!active || !payload?.length) return null;
+  const filtered = payload.filter(e => Number(e.value) > 0);
+  if (filtered.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-border bg-surface px-3 py-2 shadow-sm">
+      <p className="mb-1 text-[10px] font-semibold text-text-muted">{label}</p>
+      {filtered.map((entry, i) => (
+        <div key={i} className="flex items-center gap-2 text-xs">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
+          <span className="flex-1 truncate text-text-secondary" style={{ maxWidth: 120 }}>
+            {entry.name}
+          </span>
+          <span className="font-mono font-semibold tabular-nums text-text-primary">
+            ${Number(entry.value).toFixed(2)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function RevenueChart({ data }: { data: DailySales[] }) {
   const appIds = new Set<string>();
@@ -40,68 +59,55 @@ export function RevenueChart({ data }: { data: DailySales[] }) {
   });
 
   return (
-    <div className="border border-term-border">
-      <div className="flex items-center justify-between border-b border-term-border px-3 py-1.5">
-        <span className="text-[10px] uppercase tracking-widest text-term-dim">Revenue</span>
-        <span className="text-[10px] text-term-dim">30D</span>
+    <div className="card animate-fade-up rounded-xl" style={{ animationDelay: "0.18s" }}>
+      <div className="px-5 py-4">
+        <h3 className="section-label">Revenue</h3>
       </div>
-      <div className="px-1 py-2">
-        <ResponsiveContainer width="100%" height={220}>
+      <div className="px-2 pb-4">
+        <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="date"
-              stroke="#2a2a2a"
-              fontSize={10}
-              tickLine={false}
-              axisLine={{ stroke: "#1a1a1a" }}
-              tick={{ fill: "#555" }}
-            />
-            <YAxis
-              stroke="#2a2a2a"
-              fontSize={10}
+              stroke="transparent"
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "#555" }}
-              tickFormatter={(v) => `$${v}`}
-              domain={[0, "auto"]}
+              tick={{ fontSize: 10, fill: "#B0AAA2" }}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#111",
-                border: "1px solid #2a2a2a",
-                borderRadius: 0,
-                fontSize: "11px",
-                fontFamily: "JetBrains Mono, monospace",
-                padding: "6px 10px",
-              }}
-              itemStyle={{ padding: 0, margin: 0 }}
-              formatter={(value, name) => [
-                `$${Number(value).toFixed(2)}`,
-                appNames[String(name)] || String(name),
-              ]}
+            <YAxis
+              stroke="transparent"
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 10, fill: "#B0AAA2" }}
+              tickFormatter={(v) => v >= 0 ? `$${v}` : ""}
+              domain={[0, "dataMax"]}
+              allowDecimals={false}
+              width={45}
             />
+            <Tooltip content={<CustomTooltip />} />
             {sortedApps.map((id, i) => (
               <Area
                 key={id}
                 type="monotone"
                 dataKey={id}
                 stackId="1"
-                stroke={COLORS[i % COLORS.length]}
-                fill={COLORS[i % COLORS.length]}
-                fillOpacity={0.15}
+                stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                fill={CHART_COLORS[i % CHART_COLORS.length]}
+                fillOpacity={0.08}
                 strokeWidth={1.5}
-                name={id}
+                name={appNames[id] || id}
               />
             ))}
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-0 border-t border-term-border px-3 py-1.5">
-        {sortedApps.slice(0, 6).map((id, i) => (
-          <span key={id} className="flex items-center gap-1 text-[10px] text-term-dim">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border px-5 py-3">
+        {sortedApps.slice(0, 5).map((id, i) => (
+          <span key={id} className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
             <span
-              className="inline-block h-1.5 w-1.5"
-              style={{ backgroundColor: COLORS[i % COLORS.length] }}
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
             />
             {appNames[id]}
           </span>
