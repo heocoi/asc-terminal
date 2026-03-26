@@ -156,12 +156,6 @@ export default async function AppDetail({
           )}
         </div>
         <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
-          {storeMeta?.formattedPrice && (
-            <div>
-              <p className="text-xs text-text-muted">Price</p>
-              <p className="mt-0.5 text-text-secondary">{storeMeta.formattedPrice}</p>
-            </div>
-          )}
           {storeMeta?.genre && (
             <div>
               <p className="text-xs text-text-muted">Category</p>
