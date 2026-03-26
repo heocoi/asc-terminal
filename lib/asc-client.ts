@@ -102,15 +102,6 @@ export async function fetchIAPPriceSchedule(iapId: string): Promise<unknown> {
   });
 }
 
-export async function fetchIAPPricePoints(iapId: string, territory = "USA"): Promise<unknown> {
-  return ascFetch(`/v2/inAppPurchases/${iapId}/pricePoints`, {
-    params: {
-      "filter[territory]": territory,
-      "fields[inAppPurchasePricePoints]": "customerPrice",
-      limit: "200",
-    },
-  });
-}
 
 
 export async function fetchReviews(appId: string, limit = 5): Promise<unknown> {

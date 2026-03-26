@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPriceSchedule, fetchIAPPricePoints } from "./asc-client";
+import { ascFetch, fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPriceSchedule } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
 import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel } from "./types";
 
@@ -338,17 +338,23 @@ export const getAppPricing = unstable_cache(
           } catch { return null; }
           if (!pointNumber) return null;
 
-          // Step 3: get all price points for territory, find matching one
-          const points = (await fetchIAPPricePoints(iap.id, territory)) as {
-            data?: { id: string; attributes?: { customerPrice?: string } }[];
-          };
-          for (const pp of points.data ?? []) {
-            try {
-              const decoded = JSON.parse(Buffer.from(pp.id, "base64").toString());
-              if (decoded.p === pointNumber) {
-                return parseFloat(pp.attributes?.customerPrice ?? "0");
-              }
-            } catch { continue; }
+          // Step 3: paginate price points for territory until we find the matching one
+          let nextPath: string | null = `/v2/inAppPurchases/${iap.id}/pricePoints?filter[territory]=${territory}&fields[inAppPurchasePricePoints]=customerPrice&limit=200`;
+          while (nextPath) {
+            const points = (await ascFetch(nextPath)) as {
+              data?: { id: string; attributes?: { customerPrice?: string } }[];
+              links?: { next?: string };
+            };
+            for (const pp of points.data ?? []) {
+              try {
+                const decoded = JSON.parse(Buffer.from(pp.id, "base64").toString());
+                if (decoded.p === pointNumber) {
+                  return parseFloat(pp.attributes?.customerPrice ?? "0");
+                }
+              } catch { continue; }
+            }
+            const next = points.links?.next;
+            nextPath = next ? next.replace("https://api.appstoreconnect.apple.com", "") : null;
           }
           return null;
         })
