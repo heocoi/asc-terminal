@@ -96,10 +96,14 @@ export async function fetchInAppPurchases(appId: string): Promise<unknown> {
   });
 }
 
-export async function fetchIAPPriceSchedule(iapId: string): Promise<unknown> {
-  return ascFetch(`/v2/inAppPurchases/${iapId}/iapPriceSchedule`, {
+// Requires API key with "In-App Purchase" access
+// See: https://github.com/rudrankriyam/App-Store-Connect-CLI
+export async function fetchIAPPricePoints(iapId: string, territory = "USA"): Promise<unknown> {
+  return ascFetch(`/v2/inAppPurchases/${iapId}/pricePoints`, {
     params: {
-      include: "manualPrices",
+      "filter[territory]": territory,
+      "fields[inAppPurchasePricePoints]": "customerPrice",
+      limit: "1",
     },
   });
 }

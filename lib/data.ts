@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPriceSchedule } from "./asc-client";
+import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPricePoints } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
 import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel } from "./types";
 
@@ -322,22 +322,17 @@ export const getAppPricing = unstable_cache(
       const toFetch = approvedIAPs.slice(0, 5);
       const priceResults = await Promise.allSettled(
         toFetch.map(iap =>
-          fetchIAPPriceSchedule(iap.id) as Promise<{
-            included?: { type: string; attributes?: { customerPrice?: string } }[];
+          fetchIAPPricePoints(iap.id, territory) as Promise<{
+            data?: { attributes?: { customerPrice?: string } }[];
           }>
         )
       );
       for (const result of priceResults) {
-        if (result.status === "fulfilled") {
-          const pricePoints = (result.value.included ?? []).filter(
-            i => i.type === "inAppPurchasePricePoints"
-          );
-          for (const pp of pricePoints) {
-            const price = parseFloat(pp.attributes?.customerPrice ?? "0");
-            if (!isNaN(price) && price > 0) {
-              if (minIAPPrice === null || price < minIAPPrice) {
-                minIAPPrice = price;
-              }
+        if (result.status === "fulfilled" && result.value.data?.length) {
+          const price = parseFloat(result.value.data[0].attributes?.customerPrice ?? "0");
+          if (!isNaN(price) && price > 0) {
+            if (minIAPPrice === null || price < minIAPPrice) {
+              minIAPPrice = price;
             }
           }
         }
