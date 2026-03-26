@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases } from "./asc-client";
+import { fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPriceSchedule } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
 import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel } from "./types";
 
@@ -296,38 +296,72 @@ export const getAppStoreData = unstable_cache(
 
 const SUB_TYPES = new Set(["AUTO_RENEWABLE", "NON_RENEWING"]);
 
+interface ASCIAPData {
+  id: string;
+  attributes: { inAppPurchaseType: string; state: string; name: string };
+}
+
 export const getAppPricing = unstable_cache(
-  async (appId: string, storePrice: number): Promise<AppPricingModel> => {
+  async (appId: string, storePrice: number, territory = "USA"): Promise<AppPricingModel> => {
     let iapCount = 0;
     let subscriptionCount = 0;
+    let minIAPPrice: number | null = null;
+    let approvedIAPs: ASCIAPData[] = [];
+
     try {
-      const res = (await fetchInAppPurchases(appId)) as {
-        data?: { id: string; attributes: { inAppPurchaseType: string; state: string } }[]
-      };
-      const approved = (res.data || []).filter(iap => iap.attributes.state === "APPROVED");
-      subscriptionCount = approved.filter(iap => SUB_TYPES.has(iap.attributes.inAppPurchaseType)).length;
-      iapCount = approved.length - subscriptionCount;
+      const res = (await fetchInAppPurchases(appId)) as { data?: ASCIAPData[] };
+      approvedIAPs = (res.data || []).filter(iap => iap.attributes.state === "APPROVED");
+      subscriptionCount = approvedIAPs.filter(iap => SUB_TYPES.has(iap.attributes.inAppPurchaseType)).length;
+      iapCount = approvedIAPs.length - subscriptionCount;
     } catch {
-      // IAP endpoint may fail for some apps
+      // IAP list fetch may fail
+    }
+
+    // Fetch price schedules for up to 5 IAPs in parallel
+    if (approvedIAPs.length > 0) {
+      const toFetch = approvedIAPs.slice(0, 5);
+      const priceResults = await Promise.allSettled(
+        toFetch.map(iap =>
+          fetchIAPPriceSchedule(iap.id) as Promise<{
+            included?: { type: string; attributes?: { customerPrice?: string } }[];
+          }>
+        )
+      );
+      for (const result of priceResults) {
+        if (result.status === "fulfilled") {
+          const pricePoints = (result.value.included ?? []).filter(
+            i => i.type === "inAppPurchasePricePoints"
+          );
+          for (const pp of pricePoints) {
+            const price = parseFloat(pp.attributes?.customerPrice ?? "0");
+            if (!isNaN(price) && price > 0) {
+              if (minIAPPrice === null || price < minIAPPrice) {
+                minIAPPrice = price;
+              }
+            }
+          }
+        }
+      }
     }
 
     const isFree = storePrice === 0;
     const hasIAP = iapCount > 0;
     const hasSubscription = subscriptionCount > 0;
+    const priceTag = minIAPPrice ? `from $${minIAPPrice.toFixed(2)}` : "";
 
     let model: string;
     if (isFree && hasSubscription && hasIAP) {
-      model = "Free + Subscription + IAP";
+      model = priceTag ? `Free + Sub + IAP (${priceTag})` : "Free + Sub + IAP";
     } else if (isFree && hasSubscription) {
-      model = "Free + Subscription";
+      model = priceTag ? `Free + Subscription (${priceTag})` : "Free + Subscription";
     } else if (isFree && hasIAP) {
-      model = "Freemium";
+      model = priceTag ? `Freemium (${priceTag})` : "Freemium";
     } else if (isFree) {
       model = "Free";
     } else if (hasSubscription) {
-      model = `$${storePrice.toFixed(2)} + Subscription`;
+      model = priceTag ? `$${storePrice.toFixed(2)} + Sub (${priceTag})` : `$${storePrice.toFixed(2)} + Subscription`;
     } else if (hasIAP) {
-      model = `$${storePrice.toFixed(2)} + IAP`;
+      model = priceTag ? `$${storePrice.toFixed(2)} + IAP (${priceTag})` : `$${storePrice.toFixed(2)} + IAP`;
     } else {
       model = `$${storePrice.toFixed(2)}`;
     }
@@ -338,6 +372,7 @@ export const getAppPricing = unstable_cache(
       hasSubscription,
       iapCount,
       subscriptionCount,
+      minIAPPrice,
       model,
     };
   },

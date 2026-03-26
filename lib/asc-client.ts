@@ -96,6 +96,15 @@ export async function fetchInAppPurchases(appId: string): Promise<unknown> {
   });
 }
 
+export async function fetchIAPPriceSchedule(iapId: string): Promise<unknown> {
+  return ascFetch(`/v2/inAppPurchases/${iapId}/iapPriceSchedule`, {
+    params: {
+      include: "manualPrices",
+    },
+  });
+}
+
+
 export async function fetchReviews(appId: string, limit = 5): Promise<unknown> {
   return ascFetch(`/v1/apps/${appId}/customerReviews`, {
     params: {

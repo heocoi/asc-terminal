@@ -104,7 +104,8 @@ export interface AppPricingModel {
   hasSubscription: boolean;
   iapCount: number;
   subscriptionCount: number;
-  model: string; // "Free", "$X.XX", "Freemium", "Free + Subscription", etc.
+  minIAPPrice: number | null; // lowest IAP/sub price in base territory
+  model: string; // "Free", "$X.XX", "Freemium (from $X.XX)", etc.
 }
 
 export interface AlertItem {
