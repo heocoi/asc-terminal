@@ -105,10 +105,12 @@ function AppRowItem({
   row,
   icons,
   ratings,
+  pricingModel,
 }: {
   row: AppRow;
   icons: AppIcons;
   ratings: AppRatings;
+  pricingModel?: string;
 }) {
   const state = row.app.latestVersion?.state ?? "UNKNOWN";
   const stateLabel = STATE_LABEL[state] ?? state;
@@ -162,6 +164,12 @@ function AppRowItem({
               <span className="text-warning-text">{rating.avg.toFixed(1)}★</span>
             </>
           )}
+          {pricingModel && pricingModel !== "Free" && (
+            <>
+              <span className="text-text-faint">·</span>
+              <span className="text-accent-text">{pricingModel}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -192,11 +200,13 @@ export function AppList({
   sales,
   icons = {},
   ratings = {},
+  pricingModels = {},
 }: {
   apps: AppStatus[];
   sales: DailySales[];
   icons?: AppIcons;
   ratings?: AppRatings;
+  pricingModels?: Record<string, string>;
 }) {
   const [period, setPeriod] = useState<number>(7);
   const [showInactive, setShowInactive] = useState(false);
@@ -229,7 +239,7 @@ export function AppList({
       {/* Active apps */}
       <div className="card mt-1 divide-y divide-border rounded-xl">
         {active.map((row) => (
-          <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} />
+          <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} />
         ))}
         {active.length === 0 && (
           <div className="px-4 py-8 text-center text-sm text-text-muted">
@@ -257,7 +267,7 @@ export function AppList({
           {showInactive && (
             <div className="card mt-2 divide-y divide-border rounded-xl opacity-60">
               {inactive.map((row) => (
-                <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} />
+                <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} />
               ))}
             </div>
           )}

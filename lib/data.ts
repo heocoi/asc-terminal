@@ -296,6 +296,64 @@ export const getAppStoreData = unstable_cache(
 
 const SUB_TYPES = new Set(["AUTO_RENEWABLE", "NON_RENEWING"]);
 
+// Lightweight pricing model for dashboard (no price fetching, just model type)
+export type PricingModelMap = Record<string, string>; // appId -> model label
+
+export const getDashboardPricing = unstable_cache(
+  async (apps: { id: string; storePrice: number }[]): Promise<PricingModelMap> => {
+    const result: PricingModelMap = {};
+
+    const batches: { id: string; storePrice: number }[][] = [];
+    for (let i = 0; i < apps.length; i += 5) {
+      batches.push(apps.slice(i, i + 5));
+    }
+
+    for (const batch of batches) {
+      const results = await Promise.allSettled(
+        batch.map(async (app) => {
+          let hasIAP = false;
+          let hasSub = false;
+          try {
+            const [iapRes, subRes] = await Promise.allSettled([
+              fetchInAppPurchases(app.id) as Promise<{ data?: ASCIAPData[] }>,
+              fetchSubscriptionGroups(app.id) as Promise<{ data?: { id: string }[] }>,
+            ]);
+            if (iapRes.status === "fulfilled") {
+              const approved = (iapRes.value.data || []).filter(iap => iap.attributes.state === "APPROVED");
+              hasIAP = approved.some(iap => !SUB_TYPES.has(iap.attributes.inAppPurchaseType));
+            }
+            if (subRes.status === "fulfilled") {
+              hasSub = (subRes.value.data || []).length > 0;
+            }
+          } catch { /* skip */ }
+
+          const isFree = app.storePrice === 0;
+          let model: string;
+          if (isFree && hasSub && hasIAP) model = "Free + Sub + IAP";
+          else if (isFree && hasSub) model = "Subscription";
+          else if (isFree && hasIAP) model = "Freemium";
+          else if (isFree) model = "Free";
+          else if (hasSub) model = "Paid + Sub";
+          else if (hasIAP) model = "Paid + IAP";
+          else model = `$${app.storePrice.toFixed(2)}`;
+
+          return { id: app.id, model };
+        })
+      );
+
+      for (const r of results) {
+        if (r.status === "fulfilled") {
+          result[r.value.id] = r.value.model;
+        }
+      }
+    }
+
+    return result;
+  },
+  ["dashboard-pricing"],
+  { revalidate: 86400 }
+);
+
 interface ASCIAPData {
   id: string;
   attributes: { inAppPurchaseType: string; state: string; name: string };
