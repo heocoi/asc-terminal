@@ -98,14 +98,21 @@ export interface AppStoreMeta {
 }
 export type AppStoreMetaMap = Record<string, AppStoreMeta>;
 
+export interface SubscriptionInfo {
+  name: string;
+  price: number;
+  productId: string;
+}
+
 export interface AppPricingModel {
-  basePrice: string; // "Free" or "$X.XX"
+  basePrice: string;
   hasIAP: boolean;
   hasSubscription: boolean;
   iapCount: number;
   subscriptionCount: number;
-  minIAPPrice: number | null; // lowest IAP/sub price in base territory
-  model: string; // "Free", "$X.XX", "Freemium (from $X.XX)", etc.
+  minIAPPrice: number | null;
+  subscriptions: SubscriptionInfo[];
+  model: string;
 }
 
 export interface AlertItem {

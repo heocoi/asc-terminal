@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
-import { ascFetch, fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPriceSchedule } from "./asc-client";
+import { ascFetch, fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPriceSchedule, fetchSubscriptionGroups, fetchGroupSubscriptions, fetchSubscriptionPrice } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
-import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel } from "./types";
+import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel, SubscriptionInfo } from "./types";
 
 interface ASCAppData {
   id: string;
@@ -369,10 +369,48 @@ export const getAppPricing = unstable_cache(
       }
     }
 
+    // Fetch subscription prices
+    const subscriptions: SubscriptionInfo[] = [];
+    try {
+      const groups = (await fetchSubscriptionGroups(appId)) as {
+        data?: { id: string }[];
+      };
+      for (const group of (groups.data ?? []).slice(0, 3)) {
+        const subs = (await fetchGroupSubscriptions(group.id)) as {
+          data?: { id: string; attributes: { name: string; productId: string; state: string } }[];
+        };
+        const approved = (subs.data ?? []).filter(s => s.attributes.state === "APPROVED");
+        const priceResults = await Promise.allSettled(
+          approved.map(async (sub) => {
+            const priceRes = (await fetchSubscriptionPrice(sub.id, territory)) as {
+              included?: { type: string; attributes?: { customerPrice?: string } }[];
+            };
+            const pp = (priceRes.included ?? []).find(i => i.type === "subscriptionPricePoints");
+            const price = parseFloat(pp?.attributes?.customerPrice ?? "0");
+            return { name: sub.attributes.name, price, productId: sub.attributes.productId };
+          })
+        );
+        for (const r of priceResults) {
+          if (r.status === "fulfilled" && r.value.price > 0) {
+            subscriptions.push(r.value);
+            subscriptionCount++;
+          }
+        }
+      }
+    } catch {
+      // No subscription groups
+    }
+
     const isFree = storePrice === 0;
     const hasIAP = iapCount > 0;
-    const hasSubscription = subscriptionCount > 0;
-    const priceTag = minIAPPrice ? `from $${minIAPPrice.toFixed(2)}` : "";
+    const hasSubscription = subscriptions.length > 0;
+
+    // Build price tag: prefer subscription price, fallback to IAP
+    const lowestSub = subscriptions.length > 0
+      ? Math.min(...subscriptions.map(s => s.price))
+      : null;
+    const lowestPrice = lowestSub ?? minIAPPrice;
+    const priceTag = lowestPrice ? `from $${lowestPrice.toFixed(2)}` : "";
 
     let model: string;
     if (isFree && hasSubscription && hasIAP) {
@@ -398,6 +436,7 @@ export const getAppPricing = unstable_cache(
       iapCount,
       subscriptionCount,
       minIAPPrice,
+      subscriptions,
       model,
     };
   },

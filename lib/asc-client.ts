@@ -104,6 +104,35 @@ export async function fetchIAPPriceSchedule(iapId: string): Promise<unknown> {
 
 
 
+export async function fetchSubscriptionGroups(appId: string): Promise<unknown> {
+  return ascFetch(`/v1/apps/${appId}/subscriptionGroups`, {
+    params: {
+      "fields[subscriptionGroups]": "referenceName",
+      limit: "5",
+    },
+  });
+}
+
+export async function fetchGroupSubscriptions(groupId: string): Promise<unknown> {
+  return ascFetch(`/v1/subscriptionGroups/${groupId}/subscriptions`, {
+    params: {
+      "fields[subscriptions]": "name,productId,state",
+      limit: "20",
+    },
+  });
+}
+
+export async function fetchSubscriptionPrice(subId: string, territory = "USA"): Promise<unknown> {
+  return ascFetch(`/v1/subscriptions/${subId}/prices`, {
+    params: {
+      include: "subscriptionPricePoint",
+      "fields[subscriptionPricePoints]": "customerPrice",
+      "filter[territory]": territory,
+      limit: "1",
+    },
+  });
+}
+
 export async function fetchReviews(appId: string, limit = 5): Promise<unknown> {
   return ascFetch(`/v1/apps/${appId}/customerReviews`, {
     params: {
