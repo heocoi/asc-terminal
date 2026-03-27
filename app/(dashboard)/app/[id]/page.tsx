@@ -156,11 +156,28 @@ export default async function AppDetail({
             </a>
           )}
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
-          <div>
-            <p className="text-xs text-text-muted">Pricing</p>
-            <p className="mt-0.5 text-text-secondary">{pricing.model}</p>
+        {/* Pricing breakdown */}
+        <div className="mt-3 card rounded-xl px-5 py-4">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold text-text-secondary">{pricing.model}</p>
           </div>
+          {(pricing.subscriptions.length > 0 || pricing.hasIAP) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {pricing.subscriptions.map((sub) => (
+                <span key={sub.productId} className="rounded-md bg-accent-subtle px-2.5 py-1 text-xs text-accent-text">
+                  {sub.name} <span className="font-mono font-semibold">${sub.price.toFixed(2)}</span>
+                </span>
+              ))}
+              {pricing.minIAPPrice !== null && (
+                <span className="rounded-md bg-surface-inset px-2.5 py-1 text-xs text-text-secondary">
+                  IAP from <span className="font-mono font-semibold">${pricing.minIAPPrice.toFixed(2)}</span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
           {storeMeta?.genre && (
             <div>
               <p className="text-xs text-text-muted">Category</p>
