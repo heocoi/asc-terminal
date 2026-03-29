@@ -191,6 +191,15 @@ export interface SubscriptionStateMetrics {
   mrr: number;
 }
 
+export interface UsageMetricsData {
+  date: string;
+  sessions: number;
+  crashes: number;
+  activeDevices: number;
+  installations: number;
+  deletions: number;
+}
+
 // Setup status per app
 export interface AnalyticsSetupStatus {
   appId: string;

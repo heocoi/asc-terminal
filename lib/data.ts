@@ -2,8 +2,8 @@ import { unstable_cache } from "next/cache";
 import { ascFetch, fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPriceSchedule, fetchSubscriptionGroups, fetchGroupSubscriptions, fetchSubscriptionPrice } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
 import { fetchAnalyticsReport, getReportRequests, createReportRequest } from "./analytics-reports";
-import { aggregateEngagement, aggregateCommerce, aggregateSubscriptionEvents, aggregateSubscriptionState } from "./analytics-parser";
-import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel, SubscriptionInfo, AnalyticsCategory, AnalyticsSetupStatus, EngagementMetrics, CommerceMetrics, SubscriptionEventMetrics, SubscriptionStateMetrics } from "./types";
+import { aggregateEngagement, aggregateCommerce, aggregateSubscriptionEvents, aggregateSubscriptionState, aggregateUsage } from "./analytics-parser";
+import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel, SubscriptionInfo, AnalyticsCategory, AnalyticsSetupStatus, EngagementMetrics, CommerceMetrics, SubscriptionEventMetrics, SubscriptionStateMetrics, UsageMetricsData } from "./types";
 
 interface ASCAppData {
   id: string;
@@ -764,5 +764,18 @@ export const getSubscriptionStateData = unstable_cache(
     }
   },
   ["analytics-sub-state"],
+  { revalidate: 21600 }
+);
+
+export const getUsageData = unstable_cache(
+  async (appId: string, days = 30): Promise<UsageMetricsData[]> => {
+    try {
+      const records = await fetchAnalyticsReport(appId, "APP_USAGE", days);
+      return aggregateUsage(records);
+    } catch {
+      return [];
+    }
+  },
+  ["analytics-usage"],
   { revalidate: 21600 }
 );

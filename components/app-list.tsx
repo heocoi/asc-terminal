@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { AppStatus, DailySales, AppIcons, AppRatings } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
@@ -105,16 +105,20 @@ function getAppRows(apps: AppStatus[], sales: DailySales[], days: number): AppRo
     .sort((a, b) => b.revenue - a.revenue || b.downloads - a.downloads);
 }
 
+type EngagementSummary = Record<string, { impressions: number; pageViews: number; conversionRate: number }>;
+
 function AppRowItem({
   row,
   icons,
   ratings,
   pricingModel,
+  conversionRate,
 }: {
   row: AppRow;
   icons: AppIcons;
   ratings: AppRatings;
   pricingModel?: string;
+  conversionRate?: number;
 }) {
   const state = row.app.latestVersion?.state ?? "UNKNOWN";
   const stateLabel = STATE_LABEL[state] ?? state;
@@ -168,6 +172,12 @@ function AppRowItem({
               <span className="text-warning-text">{rating.avg.toFixed(1)}★</span>
             </>
           )}
+          {conversionRate !== undefined && conversionRate > 0 && (
+            <>
+              <span className="text-text-faint">·</span>
+              <span className="text-info-text">{(conversionRate * 100).toFixed(1)}% CVR</span>
+            </>
+          )}
           {pricingModel && pricingModel !== "Free" && (
             <>
               <span className="text-text-faint">·</span>
@@ -219,7 +229,15 @@ export function AppList({
 }) {
   const [period, setPeriod] = useState<number>(7);
   const [showInactive, setShowInactive] = useState(false);
+  const [engagement, setEngagement] = useState<EngagementSummary>({});
   const rows = getAppRows(apps, sales, period);
+
+  useEffect(() => {
+    fetch("/api/analytics/engagement?days=30")
+      .then((r) => r.json())
+      .then((data) => { if (data && typeof data === "object") setEngagement(data); })
+      .catch(() => {});
+  }, []);
 
   const active = rows.filter((r) => r.hasActivity);
   const inactive = rows.filter((r) => !r.hasActivity);
@@ -248,7 +266,7 @@ export function AppList({
       {/* Active apps */}
       <div className="card mt-1 divide-y divide-border rounded-xl">
         {active.map((row) => (
-          <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} />
+          <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} conversionRate={engagement[row.app.app.id]?.conversionRate} />
         ))}
         {active.length === 0 && (
           <div className="px-4 py-8 text-center text-sm text-text-muted">
@@ -276,7 +294,7 @@ export function AppList({
           {showInactive && (
             <div className="card mt-2 divide-y divide-border rounded-xl opacity-60">
               {inactive.map((row) => (
-                <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} />
+                <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} conversionRate={engagement[row.app.app.id]?.conversionRate} />
               ))}
             </div>
           )}

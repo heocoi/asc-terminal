@@ -3,6 +3,7 @@ import type {
   CommerceMetrics,
   SubscriptionEventMetrics,
   SubscriptionStateMetrics,
+  UsageMetricsData,
 } from "./types";
 
 function num(val: string | undefined): number {
@@ -139,5 +140,25 @@ export function aggregateSubscriptionState(records: Record<string, string>[]): S
       billingIssue,
       mrr: 0, // populated later when price data is available
     };
+  });
+}
+
+export function aggregateUsage(records: Record<string, string>[]): UsageMetricsData[] {
+  return groupByDate(records, "Date", (rows) => {
+    let sessions = 0;
+    let crashes = 0;
+    let activeDevices = 0;
+    let installations = 0;
+    let deletions = 0;
+
+    for (const r of rows) {
+      sessions += num(r["Sessions"]);
+      crashes += num(r["Crashes"]);
+      activeDevices += num(r["Active Devices"]) || num(r["Active in Last 30 Days"]);
+      installations += num(r["Installations"]);
+      deletions += num(r["Deletions"]);
+    }
+
+    return { date: rows[0]["Date"], sessions, crashes, activeDevices, installations, deletions };
   });
 }

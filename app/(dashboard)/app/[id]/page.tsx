@@ -1,6 +1,7 @@
 import { RatingBreakdown, ReviewsList } from "@/components/rating-breakdown";
 import { AppDetailView } from "@/components/app-detail-view";
-import { getSalesData, getAppsData, getReviewsData, getAppStoreData, getAppPricing, mergeSalesWithApps, getEngagementData, getSubscriptionEventData, getSubscriptionStateData } from "@/lib/data";
+import { getSalesData, getAppsData, getReviewsData, getAppStoreData, getAppPricing, mergeSalesWithApps, getEngagementData, getSubscriptionEventData, getSubscriptionStateData, getUsageData } from "@/lib/data";
+import { UsageMetrics } from "@/components/usage-metrics";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -40,13 +41,14 @@ export default async function AppDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [rawSales, allApps, reviews, engagementResult, subEventsResult, subStateResult] = await Promise.allSettled([
+  const [rawSales, allApps, reviews, engagementResult, subEventsResult, subStateResult, usageResult] = await Promise.allSettled([
     getSalesData(60),
     getAppsData(),
     getReviewsData(id),
     getEngagementData(id, 60),
     getSubscriptionEventData(id, 60),
     getSubscriptionStateData(id, 60),
+    getUsageData(id, 30),
   ]);
   const rawSalesData = rawSales.status === "fulfilled" ? rawSales.value : [];
   const allAppsData = allApps.status === "fulfilled" ? allApps.value : [];
@@ -54,6 +56,7 @@ export default async function AppDetail({
   const engagement = engagementResult.status === "fulfilled" ? engagementResult.value : [];
   const subEvents = subEventsResult.status === "fulfilled" ? subEventsResult.value : [];
   const subState = subStateResult.status === "fulfilled" ? subStateResult.value : [];
+  const usageData = usageResult.status === "fulfilled" ? usageResult.value : [];
   const allSales = mergeSalesWithApps(rawSalesData, allAppsData);
 
   const appInfo = allAppsData.find((a) => a.app.id === id);
@@ -124,6 +127,17 @@ export default async function AppDetail({
         subEvents={subEvents}
         subState={subState}
       />
+
+      {/* Usage metrics (opt-in analytics) */}
+      {usageData.length > 0 && (
+        <UsageMetrics data={{
+          sessions: usageData.reduce((s, d) => s + d.sessions, 0),
+          crashes: usageData.reduce((s, d) => s + d.crashes, 0),
+          activeDevices: usageData.length > 0 ? usageData[usageData.length - 1].activeDevices : 0,
+          installations: usageData.reduce((s, d) => s + d.installations, 0),
+          deletions: usageData.reduce((s, d) => s + d.deletions, 0),
+        }} />
+      )}
 
       {/* Reviews */}
       {(hasReviews || hasStoreRating) && (
