@@ -38,22 +38,26 @@ function monthStart(dateStr: string): string {
   return dateStr.slice(0, 7) + "-01";
 }
 
+// Pure string math to avoid timezone issues with Date constructors
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 function prevMonthRange(dateStr: string): { start: string; end: string } {
-  const d = new Date(dateStr);
-  const prevMonth = new Date(d.getFullYear(), d.getMonth() - 1, 1);
-  const dayOfMonth = d.getDate();
-  const lastDayPrevMonth = new Date(d.getFullYear(), d.getMonth(), 0).getDate();
-  const endDay = Math.min(dayOfMonth, lastDayPrevMonth);
-  const start = prevMonth.toISOString().split("T")[0];
-  const end = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), endDay)
-    .toISOString().split("T")[0];
+  const [y, m, d] = dateStr.split("-").map(Number);
+  let prevY = y, prevM = m - 1;
+  if (prevM < 1) { prevM = 12; prevY--; }
+  // Last day of previous month = day 0 of current month
+  const lastDayPrevMonth = new Date(y, m - 1, 0).getDate();
+  const endDay = Math.min(d, lastDayPrevMonth);
+  const start = `${prevY}-${pad2(prevM)}-01`;
+  const end = `${prevY}-${pad2(prevM)}-${pad2(endDay)}`;
   return { start, end };
 }
 
 function prevDayStr(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split("T")[0];
+  const [y, m, d] = dateStr.split("-").map(Number);
+  // Use UTC to avoid DST shifts
+  const date = new Date(Date.UTC(y, m - 1, d - 1));
+  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 }
 
 function CardSparkline({ values, color = "#4F46E5" }: { values: number[]; color?: string }) {

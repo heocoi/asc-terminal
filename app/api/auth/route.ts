@@ -8,6 +8,12 @@ const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
+  // Evict expired entries to prevent unbounded growth
+  if (attempts.size > 100) {
+    for (const [key, val] of attempts) {
+      if (now > val.resetAt) attempts.delete(key);
+    }
+  }
   const entry = attempts.get(ip);
   if (!entry || now > entry.resetAt) {
     attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });

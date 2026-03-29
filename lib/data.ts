@@ -276,8 +276,10 @@ function territoryToCountry(territory: string): string {
 
 export const getAppStoreData = unstable_cache(
   async (apps: { id: string; territory: string }[]): Promise<{ icons: AppIcons; ratings: AppRatings; meta: AppStoreMetaMap }> => {
+    // Sort for stable cache key serialization (array order affects cache hit)
+    const sorted = [...apps].sort((a, b) => a.id.localeCompare(b.id));
     const byCountry: Record<string, string[]> = {};
-    for (const app of apps) {
+    for (const app of sorted) {
       const country = app.territory ? territoryToCountry(app.territory) : "us";
       (byCountry[country] ??= []).push(app.id);
     }
@@ -622,7 +624,7 @@ export const getRecentBadReviews = unstable_cache(
       const results = await Promise.all(
         batch.map(async (app) => {
           try {
-            const res = (await fetchReviews(app.app.id, 5)) as { data: ASCReviewData[] };
+            const res = (await fetchReviews(app.app.id, 10)) as { data: ASCReviewData[] };
             return (res.data || [])
               .filter((r) => r.attributes.rating <= 2)
               .slice(0, 3)
