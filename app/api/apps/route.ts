@@ -75,6 +75,7 @@ export async function GET() {
           sku: app.attributes.sku,
           primaryLocale: app.attributes.primaryLocale,
           platformDisplay: latest?.attributes.platform || "unknown",
+          territory: "",
         };
 
         const latestVersion: AppVersion | null = latest
