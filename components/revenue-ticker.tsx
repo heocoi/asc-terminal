@@ -144,9 +144,9 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
   return (
     <div className="animate-fade-up">
       {/* Stats grid */}
-      <div className="grid grid-cols-12 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
         {/* Hero: latest day revenue */}
-        <div className="col-span-5 card flex flex-col overflow-hidden rounded-2xl">
+        <div className="sm:col-span-5 card flex flex-col overflow-hidden rounded-2xl">
           <div className="px-5 pt-4">
             <p className="section-label">{fmtShort(lastDate)}</p>
             <div className="mt-2 flex items-baseline gap-2.5">
@@ -176,7 +176,7 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
         </div>
 
         {/* 7-day summary */}
-        <div className="col-span-3 card flex flex-col overflow-hidden rounded-2xl">
+        <div className="sm:col-span-3 card flex flex-col overflow-hidden rounded-2xl">
           <div className="px-5 pt-4">
             <p className="section-label">{fmtShort(first7Date)} - {fmtMonthDay(lastDate)}</p>
             <p className="mt-2 font-mono text-xl font-bold tabular-nums text-text-primary">
@@ -193,7 +193,7 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
         </div>
 
         {/* Month-to-date */}
-        <div className="col-span-4 card flex flex-col overflow-hidden rounded-2xl">
+        <div className="sm:col-span-4 card flex flex-col overflow-hidden rounded-2xl">
           <div className="px-5 pt-4">
             <p className="section-label">{monthName} 1 - {fmtMonthDay(lastDate)}</p>
             <div className="mt-2 flex items-baseline gap-2">

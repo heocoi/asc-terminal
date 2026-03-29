@@ -116,10 +116,10 @@ export default async function AppDetail({
               </>
             )}
             {pricing.model !== "Free" && (
-              <>
+              <span className="hidden items-center gap-2 sm:inline-flex">
                 <span className="text-text-faint">·</span>
                 <span className="text-accent-text text-[11px]">{pricing.model}</span>
-              </>
+              </span>
             )}
           </div>
         </div>
