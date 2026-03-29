@@ -106,6 +106,7 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
   const latestRevenue = lastDay.totalProceeds;
   const latestDownloads = lastDay.totalDownloads;
   const latestRefunds = lastDay.totalRefunds;
+  const latestSubRevenue = lastDay.totalSubscriptionRevenue;
   const prevDayRevenue = prevDay?.totalProceeds ?? 0;
   const prevDayDownloads = prevDay?.totalDownloads ?? 0;
 
@@ -113,6 +114,7 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
   const thisMonthData = filterRange(data, thisMonthStart, lastDate);
   const thisMonthRevenue = thisMonthData.reduce((s, d) => s + d.totalProceeds, 0);
   const thisMonthDownloads = thisMonthData.reduce((s, d) => s + d.totalDownloads, 0);
+  const thisMonthSubRevenue = thisMonthData.reduce((s, d) => s + d.totalSubscriptionRevenue, 0);
   const prev = prevMonthRange(lastDate);
   const prevMonthData = filterRange(data, prev.start, prev.end);
   const prevMonthRevenue = prevMonthData.reduce((s, d) => s + d.totalProceeds, 0);
@@ -126,6 +128,7 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
   const last7 = data.slice(-7);
   const weekRevenue = last7.reduce((s, d) => s + d.totalProceeds, 0);
   const weekDownloads = last7.reduce((s, d) => s + d.totalDownloads, 0);
+  const weekSubRevenue = last7.reduce((s, d) => s + d.totalSubscriptionRevenue, 0);
   const first7Date = last7[0]?.date ?? lastDate;
 
   // Sparkline from last 14 days
@@ -152,17 +155,22 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
               </span>
               <DeltaBadge current={latestRevenue} previous={prevDayRevenue} />
             </div>
-            <p className="mt-1 text-[11px] text-text-muted">
-              {latestDownloads} downloads
-              {prevDayDownloads > 0 && (
-                <span className="ml-1">
-                  <DeltaBadge current={latestDownloads} previous={prevDayDownloads} />
-                </span>
+            <div className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-text-muted">
+              <span>
+                {latestDownloads} downloads
+                {prevDayDownloads > 0 && (
+                  <span className="ml-1">
+                    <DeltaBadge current={latestDownloads} previous={prevDayDownloads} />
+                  </span>
+                )}
+              </span>
+              {latestSubRevenue > 0 && (
+                <span className="text-accent-text">${latestSubRevenue.toFixed(2)} subs</span>
               )}
               {latestRefunds > 0 && (
-                <span className="ml-1.5 text-negative-text">-${latestRefunds.toFixed(2)} refunds</span>
+                <span className="text-negative-text">-${latestRefunds.toFixed(2)} refunds</span>
               )}
-            </p>
+            </div>
           </div>
           <CardSparkline values={sparkValues} />
         </div>
@@ -174,9 +182,12 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
             <p className="mt-2 font-mono text-xl font-bold tabular-nums text-text-primary">
               ${weekRevenue.toFixed(2)}
             </p>
-            <p className="mt-1 text-[11px] text-text-muted">
-              {weekDownloads} downloads
-            </p>
+            <div className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-text-muted">
+              <span>{weekDownloads} downloads</span>
+              {weekSubRevenue > 0 && (
+                <span className="text-accent-text">${weekSubRevenue.toFixed(2)} subs</span>
+              )}
+            </div>
           </div>
           <CardSparkline values={last7.map(d => d.totalProceeds)} color="#0EA5E9" />
         </div>
@@ -191,9 +202,12 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
               </span>
               <DeltaBadge current={thisMonthRevenue} previous={prevMonthRevenue} />
             </div>
-            <p className="mt-1 text-[11px] text-text-muted">
-              {thisMonthDownloads} downloads
-            </p>
+            <div className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-text-muted">
+              <span>{thisMonthDownloads} downloads</span>
+              {thisMonthSubRevenue > 0 && (
+                <span className="text-accent-text">${thisMonthSubRevenue.toFixed(2)} subs</span>
+              )}
+            </div>
           </div>
           <CardSparkline values={thisMonthData.map(d => d.totalProceeds)} color="#10B981" />
         </div>
