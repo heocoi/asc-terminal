@@ -159,45 +159,57 @@ export function AppDetailView({
           </div>
         </div>
 
-        <div className={`grid gap-3 ${totalSubRevenue > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
-          <div className="card rounded-xl px-5 py-4">
-            <p className="section-label">Revenue</p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="font-mono text-2xl font-bold tabular-nums text-text-primary">
-                ${totalProceeds.toFixed(2)}
-              </span>
-              <DeltaBadge current={totalProceeds} previous={prevProceeds} />
-            </div>
-            {totalRefunds > 0 && (
-              <p className="mt-1 text-[11px] text-negative-text">
-                -${totalRefunds.toFixed(2)} refunds
-              </p>
-            )}
-          </div>
-          {totalSubRevenue > 0 && (
-            <div className="card rounded-xl px-5 py-4">
-              <p className="section-label">Subscriptions</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="font-mono text-2xl font-bold tabular-nums text-text-primary">
-                  ${totalSubRevenue.toFixed(2)}
-                </span>
-                <DeltaBadge current={totalSubRevenue} previous={prevSubRevenue} />
+        {(() => {
+          // Only show sub card when it adds info (not when sub ≈ total revenue)
+          const subPct = totalProceeds > 0 ? totalSubRevenue / totalProceeds : 0;
+          const showSubCard = totalSubRevenue > 0 && subPct < 0.95;
+          return (
+            <div className={`grid gap-3 ${showSubCard ? "grid-cols-3" : "grid-cols-2"}`}>
+              <div className="card rounded-xl px-5 py-4">
+                <p className="section-label">Revenue</p>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="font-mono text-2xl font-bold tabular-nums text-text-primary">
+                    ${totalProceeds.toFixed(2)}
+                  </span>
+                  <DeltaBadge current={totalProceeds} previous={prevProceeds} />
+                </div>
+                {totalRefunds > 0 && (
+                  <p className="mt-1 text-[11px] text-negative-text">
+                    -${totalRefunds.toFixed(2)} refunds
+                  </p>
+                )}
+                {totalSubRevenue > 0 && !showSubCard && (
+                  <p className="mt-1 text-[11px] text-accent-text">
+                    100% subscription
+                  </p>
+                )}
               </div>
-              <p className="mt-1 text-[11px] text-text-muted">
-                {totalProceeds > 0 ? `${((totalSubRevenue / totalProceeds) * 100).toFixed(0)}% of revenue` : ""}
-              </p>
+              {showSubCard && (
+                <div className="card rounded-xl px-5 py-4">
+                  <p className="section-label">Subscriptions</p>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="font-mono text-2xl font-bold tabular-nums text-text-primary">
+                      ${totalSubRevenue.toFixed(2)}
+                    </span>
+                    <DeltaBadge current={totalSubRevenue} previous={prevSubRevenue} />
+                  </div>
+                  <p className="mt-1 text-[11px] text-text-muted">
+                    {`${(subPct * 100).toFixed(0)}% of revenue`}
+                  </p>
+                </div>
+              )}
+              <div className="card rounded-xl px-5 py-4">
+                <p className="section-label">Downloads</p>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="font-mono text-2xl font-bold tabular-nums text-text-primary">
+                    {totalDownloads}
+                  </span>
+                  <DeltaBadge current={totalDownloads} previous={prevDownloads} />
+                </div>
+              </div>
             </div>
-          )}
-          <div className="card rounded-xl px-5 py-4">
-            <p className="section-label">Downloads</p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="font-mono text-2xl font-bold tabular-nums text-text-primary">
-                {totalDownloads}
-              </span>
-              <DeltaBadge current={totalDownloads} previous={prevDownloads} />
-            </div>
-          </div>
-        </div>
+          );
+        })()}
       </div>
 
       {/* Chart + Country */}

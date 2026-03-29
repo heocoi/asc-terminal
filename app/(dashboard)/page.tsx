@@ -24,11 +24,24 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-10">
+      {/* Q1: "How much did I make?" - 5-sec glance */}
       <RevenueTicker data={sales} />
+
+      {/* Q2: "What needs attention?" - actionable alerts */}
       <AttentionPanel alerts={alerts} badReviews={badReviews} />
-      <AppList apps={apps} sales={sales} icons={storeData.icons} ratings={storeData.ratings} pricingModels={pricingModels} />
+
+      {/* Q3: "What's the trend?" - pattern recognition */}
       <TrendChart data={sales} />
-      <SubscriptionSummary sales={sales} />
+
+      {/* Q4: "How's each app?" - drill-down */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <AppList apps={apps} sales={sales} icons={storeData.icons} ratings={storeData.ratings} pricingModels={pricingModels} />
+        </div>
+        <div>
+          <SubscriptionSummary sales={sales} />
+        </div>
+      </div>
     </div>
   );
 }

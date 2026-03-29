@@ -115,6 +115,12 @@ export default async function AppDetail({
                 <span className="text-text-muted">({storeRating.count})</span>
               </>
             )}
+            {pricing.model !== "Free" && (
+              <>
+                <span className="text-text-faint">·</span>
+                <span className="text-accent-text text-[11px]">{pricing.model}</span>
+              </>
+            )}
           </div>
         </div>
       </div>
