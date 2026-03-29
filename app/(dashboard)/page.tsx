@@ -24,24 +24,18 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-10">
-      {/* Q1: "How much did I make?" - 5-sec glance */}
-      <RevenueTicker data={sales} />
-
-      {/* Q2: "What needs attention?" - actionable alerts */}
+      {/* Urgent first: what needs action? */}
       <AttentionPanel alerts={alerts} badReviews={badReviews} />
 
-      {/* Q3: "What's the trend?" - pattern recognition */}
+      {/* Money picture: all revenue at a glance */}
+      <RevenueTicker data={sales} />
+      <SubscriptionSummary sales={sales} />
+
+      {/* Trends: pattern recognition */}
       <TrendChart data={sales} />
 
-      {/* Revenue breakdown + portfolio drill-down */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <AppList apps={apps} sales={sales} icons={storeData.icons} ratings={storeData.ratings} pricingModels={pricingModels} />
-        </div>
-        <div className="lg:col-span-2">
-          <SubscriptionSummary sales={sales} />
-        </div>
-      </div>
+      {/* Portfolio drill-down */}
+      <AppList apps={apps} sales={sales} icons={storeData.icons} ratings={storeData.ratings} pricingModels={pricingModels} />
     </div>
   );
 }
