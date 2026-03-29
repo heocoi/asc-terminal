@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NavLinks } from "@/components/nav-links";
 
 export default function DashboardLayout({
   children,
@@ -21,17 +22,7 @@ export default function DashboardLayout({
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1">
-            <span className="rounded-lg bg-accent-subtle px-3 py-1.5 text-xs font-semibold text-accent-text">
-              Overview
-            </span>
-            <span className="rounded-lg px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:text-text-secondary">
-              Reviews
-            </span>
-            <span className="rounded-lg px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:text-text-secondary">
-              Submit
-            </span>
-          </nav>
+          <NavLinks />
         </div>
       </header>
 

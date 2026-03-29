@@ -1,6 +1,6 @@
 import { RatingBreakdown, ReviewsList } from "@/components/rating-breakdown";
 import { AppDetailView } from "@/components/app-detail-view";
-import { getSalesData, getAppsData, getReviewsData, getAppStoreData, getAppPricing, mergeSalesWithApps } from "@/lib/data";
+import { getSalesData, getAppsData, getReviewsData, getAppStoreData, getAppPricing, mergeSalesWithApps, getEngagementData, getSubscriptionEventData, getSubscriptionStateData } from "@/lib/data";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -40,14 +40,23 @@ export default async function AppDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [rawSales, allApps, reviews] = await Promise.all([
+  const [rawSales, allApps, reviews, engagementResult, subEventsResult, subStateResult] = await Promise.allSettled([
     getSalesData(60),
     getAppsData(),
     getReviewsData(id),
+    getEngagementData(id, 60),
+    getSubscriptionEventData(id, 60),
+    getSubscriptionStateData(id, 60),
   ]);
-  const allSales = mergeSalesWithApps(rawSales, allApps);
+  const rawSalesData = rawSales.status === "fulfilled" ? rawSales.value : [];
+  const allAppsData = allApps.status === "fulfilled" ? allApps.value : [];
+  const reviewsData = reviews.status === "fulfilled" ? reviews.value : [];
+  const engagement = engagementResult.status === "fulfilled" ? engagementResult.value : [];
+  const subEvents = subEventsResult.status === "fulfilled" ? subEventsResult.value : [];
+  const subState = subStateResult.status === "fulfilled" ? subStateResult.value : [];
+  const allSales = mergeSalesWithApps(rawSalesData, allAppsData);
 
-  const appInfo = allApps.find((a) => a.app.id === id);
+  const appInfo = allAppsData.find((a) => a.app.id === id);
   const name = appInfo?.app.name ?? "Unknown App";
   const version = appInfo?.latestVersion?.versionString ?? "?";
   const state = appInfo?.latestVersion?.state ?? "UNKNOWN";
@@ -55,14 +64,14 @@ export default async function AppDetail({
   const stateColor = STATE_COLOR[stateLabel] ?? "text-text-muted bg-surface-inset";
   const platform = PLATFORM_SHORT[appInfo?.app.platformDisplay ?? ""] ?? appInfo?.app.platformDisplay ?? "";
 
-  const appEntries = allApps.map((a) => ({ id: a.app.id, territory: a.app.territory }));
+  const appEntries = allAppsData.map((a) => ({ id: a.app.id, territory: a.app.territory }));
   const storeData = await getAppStoreData(appEntries);
   const iconUrl = storeData.icons[id];
   const storeRating = storeData.ratings[id];
   const storeMeta = storeData.meta[id];
   const pricing = await getAppPricing(id, storeMeta?.price ?? 0);
 
-  const hasReviews = reviews.length > 0;
+  const hasReviews = reviewsData.length > 0;
   const hasStoreRating = storeRating && storeRating.count > 0;
 
   return (
@@ -108,7 +117,13 @@ export default async function AppDetail({
       </div>
 
       {/* Interactive section: anomaly + stats + period selector + chart + country */}
-      <AppDetailView allSales={allSales} appId={id} />
+      <AppDetailView
+        allSales={allSales}
+        appId={id}
+        engagement={engagement}
+        subEvents={subEvents}
+        subState={subState}
+      />
 
       {/* Reviews */}
       {(hasReviews || hasStoreRating) && (
@@ -116,7 +131,7 @@ export default async function AppDetail({
           <h2 className="section-label mb-3">Reviews</h2>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             {hasReviews ? (
-              <RatingBreakdown reviews={reviews} />
+              <RatingBreakdown reviews={reviewsData} />
             ) : hasStoreRating ? (
               <div className="card rounded-xl px-5 py-4">
                 <p className="section-label">App Store Rating</p>
@@ -130,7 +145,7 @@ export default async function AppDetail({
               </div>
             ) : null}
             <div className="lg:col-span-2">
-              <ReviewsList reviews={reviews} />
+              <ReviewsList reviews={reviewsData} />
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { TrendChart } from "@/components/trend-chart";
 import { CountryBreakdown } from "@/components/country-breakdown";
-import type { DailySales } from "@/lib/types";
+import type { DailySales, EngagementMetrics, SubscriptionEventMetrics, SubscriptionStateMetrics } from "@/lib/types";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function fmtShort(d: string) {
@@ -64,7 +64,19 @@ function getAppAlerts(sales: DailySales[], appId: string): string[] {
   return alerts;
 }
 
-export function AppDetailView({ allSales, appId }: { allSales: DailySales[]; appId: string }) {
+export function AppDetailView({
+  allSales,
+  appId,
+  engagement = [],
+  subEvents = [],
+  subState = [],
+}: {
+  allSales: DailySales[];
+  appId: string;
+  engagement?: EngagementMetrics[];
+  subEvents?: SubscriptionEventMetrics[];
+  subState?: SubscriptionStateMetrics[];
+}) {
   const [period, setPeriod] = useState<number>(30);
 
   // Slice data for selected period
@@ -194,6 +206,106 @@ export function AppDetailView({ allSales, appId }: { allSales: DailySales[]; app
         </div>
         <CountryBreakdown sales={currentSlice} appId={appId} />
       </div>
+
+      {/* Engagement metrics (from Analytics Reports API) */}
+      {engagement.length > 0 && (
+        <div className="animate-fade-up space-y-3" style={{ animationDelay: "0.14s" }}>
+          <h3 className="section-label">App Store Engagement</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="card rounded-xl px-5 py-4">
+              <p className="section-label">Impressions</p>
+              <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-text-primary">
+                {engagement.reduce((s, e) => s + e.impressions, 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="card rounded-xl px-5 py-4">
+              <p className="section-label">Page Views</p>
+              <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-text-primary">
+                {engagement.reduce((s, e) => s + e.pageViews, 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="card rounded-xl px-5 py-4">
+              <p className="section-label">Conversion Rate</p>
+              <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-text-primary">
+                {(() => {
+                  const imp = engagement.reduce((s, e) => s + e.impressions, 0);
+                  const avgRate = imp > 0
+                    ? (totalDownloads / imp) * 100
+                    : 0;
+                  return `${avgRate.toFixed(1)}%`;
+                })()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription analytics (from Analytics Reports API) */}
+      {(subState.length > 0 || subEvents.length > 0) && (
+        <div className="animate-fade-up space-y-3" style={{ animationDelay: "0.16s" }}>
+          <h3 className="section-label">Subscription Analytics</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {subState.length > 0 && (() => {
+              const latest = subState[subState.length - 1];
+              return (
+                <>
+                  <div className="card rounded-xl px-5 py-4">
+                    <p className="section-label">Active Paid</p>
+                    <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-text-primary">
+                      {latest.activePaid}
+                    </p>
+                  </div>
+                  <div className="card rounded-xl px-5 py-4">
+                    <p className="section-label">Free Trials</p>
+                    <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-text-primary">
+                      {latest.activeFreeTrial}
+                    </p>
+                  </div>
+                  {latest.billingIssue > 0 && (
+                    <div className="card rounded-xl px-5 py-4">
+                      <p className="section-label">Billing Issues</p>
+                      <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-warning-text">
+                        {latest.billingIssue}
+                      </p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+            {subEvents.length > 0 && (() => {
+              const totalTrials = subEvents.reduce((s, e) => s + e.trialStarts, 0);
+              const totalConversions = subEvents.reduce((s, e) => s + e.trialConversions, 0);
+              const totalChurns = subEvents.reduce((s, e) => s + e.voluntaryChurns + e.involuntaryChurns, 0);
+              const convRate = totalTrials > 0 ? (totalConversions / totalTrials) * 100 : 0;
+              return (
+                <>
+                  {totalTrials > 0 && (
+                    <div className="card rounded-xl px-5 py-4">
+                      <p className="section-label">Trial Starts</p>
+                      <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-text-primary">
+                        {totalTrials}
+                      </p>
+                      {convRate > 0 && (
+                        <p className="mt-1 text-[11px] text-text-muted">
+                          {convRate.toFixed(0)}% converted
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {totalChurns > 0 && (
+                    <div className="card rounded-xl px-5 py-4">
+                      <p className="section-label">Churns</p>
+                      <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-negative-text">
+                        {totalChurns}
+                      </p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </>
   );
 }

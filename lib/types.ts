@@ -120,6 +120,86 @@ export interface AppPricingModel {
   model: string;
 }
 
+// Analytics Reports API types
+export interface AnalyticsReportRequest {
+  id: string;
+  accessType: "ONGOING" | "ONE_TIME_SNAPSHOT";
+  stoppedDueToInactivity: boolean;
+}
+
+export interface AnalyticsReportMeta {
+  category: string;
+  name: string;
+}
+
+export interface AnalyticsReportInstance {
+  id: string;
+  granularity: string;
+  processingDate: string;
+}
+
+export interface AnalyticsSegment {
+  id: string;
+  url: string;
+  checksum: string;
+}
+
+// Report categories
+export type AnalyticsCategory =
+  | "APP_STORE_ENGAGEMENT"
+  | "APP_STORE_COMMERCE"
+  | "APP_USAGE"
+  | "SUBSCRIPTION_EVENT"
+  | "SUBSCRIPTION_STATE";
+
+// Parsed metrics from analytics reports
+export interface EngagementMetrics {
+  date: string;
+  impressions: number;
+  impressionsUnique: number;
+  pageViews: number;
+  pageViewsUnique: number;
+  conversionRate: number; // downloads / impressions
+}
+
+export interface CommerceMetrics {
+  date: string;
+  totalDownloads: number;
+  proceeds: number;
+  payingUsers: number;
+  refunds: number;
+}
+
+export interface SubscriptionEventMetrics {
+  date: string;
+  trialStarts: number;
+  trialConversions: number;
+  paidStarts: number;
+  renewals: number;
+  voluntaryChurns: number;
+  involuntaryChurns: number;
+  billingIssueEntries: number;
+  gracePeriodRecoveries: number;
+}
+
+export interface SubscriptionStateMetrics {
+  date: string;
+  activePaid: number;
+  activeFreeTrial: number;
+  activePaidOffer: number;
+  billingIssue: number;
+  mrr: number;
+}
+
+// Setup status per app
+export interface AnalyticsSetupStatus {
+  appId: string;
+  appName: string;
+  hasRequest: boolean;
+  requestId?: string;
+  status: "not_setup" | "pending" | "active" | "inactive";
+}
+
 export interface AlertItem {
   type: "rejected" | "in_review" | "bad_review" | "anomaly";
   severity: "red" | "amber" | "blue";

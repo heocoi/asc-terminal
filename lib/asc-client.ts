@@ -31,6 +31,35 @@ export async function ascFetch(
   return res.json();
 }
 
+export async function ascPost(path: string, body: unknown): Promise<unknown> {
+  const token = await getToken();
+  const url = new URL(path, BASE_URL);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`ASC API POST ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function ascDownload(fullUrl: string): Promise<Buffer> {
+  const token = await getToken();
+  const res = await fetch(fullUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`ASC download ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 export async function fetchSalesReport(
   date: string,
   frequency: "DAILY" | "WEEKLY" = "DAILY"

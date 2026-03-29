@@ -1,7 +1,9 @@
 import { unstable_cache } from "next/cache";
 import { ascFetch, fetchSalesReport, fetchAllApps, fetchAppVersions, fetchAppTerritories, fetchReviews, fetchInAppPurchases, fetchIAPPriceSchedule, fetchSubscriptionGroups, fetchGroupSubscriptions, fetchSubscriptionPrice } from "./asc-client";
 import { parseSalesReport, aggregateSales } from "./sales-parser";
-import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel, SubscriptionInfo } from "./types";
+import { fetchAnalyticsReport, getReportRequests, createReportRequest } from "./analytics-reports";
+import { aggregateEngagement, aggregateCommerce, aggregateSubscriptionEvents, aggregateSubscriptionState } from "./analytics-parser";
+import type { DailySales, AppStatus, AppInfo, AppVersion, Review, AlertItem, AppIcons, AppRatings, AppStoreMetaMap, AppPricingModel, SubscriptionInfo, AnalyticsCategory, AnalyticsSetupStatus, EngagementMetrics, CommerceMetrics, SubscriptionEventMetrics, SubscriptionStateMetrics } from "./types";
 
 interface ASCAppData {
   id: string;
@@ -648,4 +650,119 @@ export const getRecentBadReviews = unstable_cache(
   },
   ["bad-reviews"],
   { revalidate: 3600 }
+);
+
+// ─── Analytics Reports API ───────────────────────────────────────────
+
+// Check analytics setup status for all apps
+export async function getAnalyticsSetupStatus(apps: AppStatus[]): Promise<AnalyticsSetupStatus[]> {
+  const results: AnalyticsSetupStatus[] = [];
+
+  // Batch 5 at a time to avoid rate limits
+  for (let i = 0; i < apps.length; i += 5) {
+    const batch = apps.slice(i, i + 5);
+    const batchResults = await Promise.allSettled(
+      batch.map(async (app) => {
+        try {
+          const requests = await getReportRequests(app.app.id);
+          const ongoing = requests.find((r) => r.accessType === "ONGOING");
+          if (!ongoing) {
+            return { appId: app.app.id, appName: app.app.name, hasRequest: false, status: "not_setup" as const };
+          }
+          return {
+            appId: app.app.id,
+            appName: app.app.name,
+            hasRequest: true,
+            requestId: ongoing.id,
+            status: ongoing.stoppedDueToInactivity ? "inactive" as const : "active" as const,
+          };
+        } catch {
+          return { appId: app.app.id, appName: app.app.name, hasRequest: false, status: "not_setup" as const };
+        }
+      })
+    );
+    for (const r of batchResults) {
+      if (r.status === "fulfilled") results.push(r.value);
+    }
+  }
+
+  return results;
+}
+
+// Setup analytics for all apps (create ONGOING requests)
+export async function setupAnalytics(apps: AppStatus[]): Promise<{ success: number; failed: number }> {
+  let success = 0;
+  let failed = 0;
+
+  for (let i = 0; i < apps.length; i += 5) {
+    const batch = apps.slice(i, i + 5);
+    const results = await Promise.allSettled(
+      batch.map(async (app) => {
+        // Check if already has ONGOING request
+        const requests = await getReportRequests(app.app.id);
+        const hasOngoing = requests.some((r) => r.accessType === "ONGOING");
+        if (hasOngoing) return; // skip
+        await createReportRequest(app.app.id);
+      })
+    );
+    for (const r of results) {
+      if (r.status === "fulfilled") success++;
+      else failed++;
+    }
+  }
+
+  return { success, failed };
+}
+
+// Cached analytics data fetchers (6h cache - data is T+2, immutable)
+export const getEngagementData = unstable_cache(
+  async (appId: string, days = 30): Promise<EngagementMetrics[]> => {
+    try {
+      const records = await fetchAnalyticsReport(appId, "APP_STORE_ENGAGEMENT", days);
+      return aggregateEngagement(records);
+    } catch {
+      return [];
+    }
+  },
+  ["analytics-engagement"],
+  { revalidate: 21600 }
+);
+
+export const getCommerceData = unstable_cache(
+  async (appId: string, days = 30): Promise<CommerceMetrics[]> => {
+    try {
+      const records = await fetchAnalyticsReport(appId, "APP_STORE_COMMERCE", days);
+      return aggregateCommerce(records);
+    } catch {
+      return [];
+    }
+  },
+  ["analytics-commerce"],
+  { revalidate: 21600 }
+);
+
+export const getSubscriptionEventData = unstable_cache(
+  async (appId: string, days = 30): Promise<SubscriptionEventMetrics[]> => {
+    try {
+      const records = await fetchAnalyticsReport(appId, "SUBSCRIPTION_EVENT", days);
+      return aggregateSubscriptionEvents(records);
+    } catch {
+      return [];
+    }
+  },
+  ["analytics-sub-events"],
+  { revalidate: 21600 }
+);
+
+export const getSubscriptionStateData = unstable_cache(
+  async (appId: string, days = 30): Promise<SubscriptionStateMetrics[]> => {
+    try {
+      const records = await fetchAnalyticsReport(appId, "SUBSCRIPTION_STATE", days);
+      return aggregateSubscriptionState(records);
+    } catch {
+      return [];
+    }
+  },
+  ["analytics-sub-state"],
+  { revalidate: 21600 }
 );
