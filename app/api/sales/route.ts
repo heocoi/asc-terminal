@@ -26,7 +26,7 @@ async function fetchDaySales(date: string): Promise<DailySales | null> {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const days = Math.min(parseInt(searchParams.get("days") || "30"), 90);
+  const days = Math.min(Math.max(parseInt(searchParams.get("days") || "30", 10) || 30, 1), 90);
 
   const results: DailySales[] = [];
   const today = new Date();

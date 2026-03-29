@@ -6,12 +6,7 @@ import {
   ComposedChart, Bar,
 } from "recharts";
 import type { SubscriptionStateMetrics, SubscriptionEventMetrics } from "@/lib/types";
-
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-function fmtDate(d: string) {
-  const [, m, day] = d.split("-");
-  return `${MONTHS[parseInt(m, 10) - 1]} ${parseInt(day, 10)}`;
-}
+import { fmtShort } from "@/lib/format";
 
 type View = "state" | "events";
 
@@ -47,14 +42,14 @@ export function SubscriptionChart({
   if (stateData.length === 0 && eventData.length === 0) return null;
 
   const stateChartData = stateData.map((d) => ({
-    date: fmtDate(d.date),
+    date: fmtShort(d.date),
     "Active Paid": d.activePaid,
     "Free Trial": d.activeFreeTrial,
     "Billing Issue": d.billingIssue,
   }));
 
   const eventChartData = eventData.map((d) => ({
-    date: fmtDate(d.date),
+    date: fmtShort(d.date),
     "Trial Starts": d.trialStarts,
     "Conversions": d.trialConversions,
     "Renewals": d.renewals,

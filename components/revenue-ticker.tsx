@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DailySales } from "@/lib/types";
+import { DeltaBadge } from "@/components/delta-badge";
+import { MONTHS_LONG, fmtShort, fmtMonthDay } from "@/lib/format";
 
 function useCountUp(target: number, duration = 800) {
   const [value, setValue] = useState(0);
@@ -26,24 +28,6 @@ function useCountUp(target: number, duration = 800) {
   }, [target, duration]);
 
   return value;
-}
-
-function DeltaBadge({ current, previous }: { current: number; previous: number }) {
-  if (previous === 0) return null;
-  const pct = ((current - previous) / previous) * 100;
-  const isUp = pct >= 0;
-
-  return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${
-      isUp ? "text-positive-text" : "text-negative-text"
-    }`}>
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
-        className={isUp ? "" : "rotate-180"}>
-        <path d="M5 2L8.5 6.5H1.5L5 2Z" />
-      </svg>
-      {Math.abs(pct).toFixed(0)}%
-    </span>
-  );
 }
 
 function filterRange(data: DailySales[], startDate: string, endDate: string): DailySales[] {
@@ -118,8 +102,6 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
   const prev = prevMonthRange(lastDate);
   const prevMonthData = filterRange(data, prev.start, prev.end);
   const prevMonthRevenue = prevMonthData.reduce((s, d) => s + d.totalProceeds, 0);
-  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const monthName = MONTHS_LONG[parseInt(lastDate.split("-")[1], 10) - 1];
 
   const animatedRevenue = useCountUp(latestRevenue);
@@ -134,12 +116,6 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
   // Sparkline from last 14 days
   const sparkValues = data.slice(-14).map(d => d.totalProceeds);
 
-  // Format helpers - parse string directly to avoid timezone shift
-  const fmtShort = (d: string) => {
-    const [, m, day] = d.split("-");
-    return `${MONTHS[parseInt(m, 10) - 1]} ${parseInt(day, 10)}`;
-  };
-  const fmtMonthDay = (d: string) => String(parseInt(d.split("-")[2], 10));
 
   return (
     <div className="animate-fade-up">

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { SignJWT } from "jose";
 
 export async function POST(request: Request) {
   const { password } = await request.json();
@@ -8,8 +9,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  // Sign a JWT session token instead of storing raw password
+  const secret = new TextEncoder().encode(expected);
+  const token = await new SignJWT({ auth: true })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("30d")
+    .sign(secret);
+
   const response = NextResponse.json({ ok: true });
-  response.cookies.set("asc-auth", password, {
+  response.cookies.set("asc-auth", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

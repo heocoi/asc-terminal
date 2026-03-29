@@ -6,48 +6,63 @@ const UPDATE_TYPES = new Set(["7", "7F", "7T", "F7"]);
 // IAP product types: consumable, non-consumable, free subscription
 const IAP_TYPES = new Set(["IA1", "IA9", "IAY", "IAC", "FI1"]);
 
+// Map header names to SalesRecord fields (Apple may reorder columns)
+const HEADER_MAP: Record<string, keyof SalesRecord> = {
+  "Provider": "provider",
+  "Provider Country": "providerCountry",
+  "SKU": "sku",
+  "Developer": "developer",
+  "Title": "title",
+  "Version": "version",
+  "Product Type Identifier": "productTypeIdentifier",
+  "Units": "units",
+  "Developer Proceeds": "developerProceeds",
+  "Begin Date": "beginDate",
+  "End Date": "endDate",
+  "Customer Currency": "customerCurrency",
+  "Country Code": "countryCode",
+  "Currency of Proceeds": "currencyOfProceeds",
+  "Apple Identifier": "appleIdentifier",
+  "Customer Price": "customerPrice",
+  "Promo Code": "promoCode",
+  "Parent Identifier": "parentIdentifier",
+  "Subscription": "subscription",
+  "Period": "period",
+  "Category": "category",
+  "CMB": "cmb",
+  "Device": "device",
+  "Supported Platforms": "supportedPlatforms",
+  "Proceeds Reason": "proceedsReason",
+  "Preserved Pricing": "preservedPricing",
+  "Client": "client",
+  "Order Type": "orderType",
+};
+
+const NUM_FIELDS = new Set<keyof SalesRecord>(["units", "developerProceeds", "customerPrice"]);
+
 export function parseSalesReport(gzipBuffer: Buffer): SalesRecord[] {
   const text = gunzipSync(gzipBuffer).toString("utf-8");
   const lines = text.trim().split("\n");
   if (lines.length < 2) return [];
 
-  const headers = lines[0].split("\t");
-  const records: SalesRecord[] = [];
+  const headers = lines[0].split("\t").map(h => h.trim());
+  const colMap: { field: keyof SalesRecord; index: number }[] = [];
+  for (let i = 0; i < headers.length; i++) {
+    const field = HEADER_MAP[headers[i]];
+    if (field) colMap.push({ field, index: i });
+  }
 
+  const records: SalesRecord[] = [];
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].split("\t");
-    if (values.length < headers.length) continue;
+    if (values.length < colMap.length) continue;
 
-    records.push({
-      provider: values[0],
-      providerCountry: values[1],
-      sku: values[2],
-      developer: values[3],
-      title: values[4],
-      version: values[5],
-      productTypeIdentifier: values[6],
-      units: parseFloat(values[7]) || 0,
-      developerProceeds: parseFloat(values[8]) || 0,
-      beginDate: values[9],
-      endDate: values[10],
-      customerCurrency: values[11],
-      countryCode: values[12],
-      currencyOfProceeds: values[13],
-      appleIdentifier: values[14],
-      customerPrice: parseFloat(values[15]) || 0,
-      promoCode: values[16],
-      parentIdentifier: values[17],
-      subscription: values[18],
-      period: values[19],
-      category: values[20],
-      cmb: values[21],
-      device: values[22],
-      supportedPlatforms: values[23],
-      proceedsReason: values[24],
-      preservedPricing: values[25],
-      client: values[26],
-      orderType: values[27],
-    });
+    const record = {} as Record<keyof SalesRecord, string | number>;
+    for (const { field, index } of colMap) {
+      const raw = values[index] ?? "";
+      record[field] = NUM_FIELDS.has(field) ? (parseFloat(raw) || 0) : raw;
+    }
+    records.push(record as unknown as SalesRecord);
   }
 
   return records;

@@ -378,8 +378,8 @@ export const getAppPricing = unstable_cache(
     try {
       const res = (await fetchInAppPurchases(appId)) as { data?: ASCIAPData[] };
       approvedIAPs = (res.data || []).filter(iap => iap.attributes.state === "APPROVED");
-      subscriptionCount = approvedIAPs.filter(iap => SUB_TYPES.has(iap.attributes.inAppPurchaseType)).length;
-      iapCount = approvedIAPs.length - subscriptionCount;
+      const subTypeCount = approvedIAPs.filter(iap => SUB_TYPES.has(iap.attributes.inAppPurchaseType)).length;
+      iapCount = approvedIAPs.length - subTypeCount;
     } catch {
       // IAP list fetch may fail
     }
@@ -407,7 +407,8 @@ export const getAppPricing = unstable_cache(
 
           // Step 3: paginate price points for territory until we find the matching one
           let nextPath: string | null = `/v2/inAppPurchases/${iap.id}/pricePoints?filter[territory]=${territory}&fields[inAppPurchasePricePoints]=customerPrice&limit=200`;
-          while (nextPath) {
+          let maxPages = 10;
+          while (nextPath && maxPages-- > 0) {
             const points = (await ascFetch(nextPath)) as {
               data?: { id: string; attributes?: { customerPrice?: string } }[];
               links?: { next?: string };

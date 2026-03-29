@@ -1,30 +1,43 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { jwtVerify } from "jose";
 
-export function middleware(request: NextRequest) {
+const PUBLIC_PATHS = new Set(["/login", "/api/auth"]);
+
+function getSecret() {
   const password = process.env.DASHBOARD_PASSWORD;
-  if (!password) return NextResponse.next(); // No password = no auth
+  if (!password) return null;
+  return new TextEncoder().encode(password);
+}
 
-  // Skip auth for API routes (they're server-side only)
-  if (request.nextUrl.pathname.startsWith("/api/")) {
+export async function middleware(request: NextRequest) {
+  const secret = getSecret();
+  if (!secret) return NextResponse.next(); // No password = no auth
+
+  const { pathname } = request.nextUrl;
+
+  // Allow login page and auth endpoint
+  if (PUBLIC_PATHS.has(pathname)) {
     return NextResponse.next();
   }
 
+  // Verify signed session token
   const authCookie = request.cookies.get("asc-auth");
-  if (authCookie?.value === password) {
-    return NextResponse.next();
+  if (authCookie?.value) {
+    try {
+      await jwtVerify(authCookie.value, secret);
+      return NextResponse.next();
+    } catch {
+      // Invalid/expired token - fall through to redirect
+    }
   }
 
-  // Check if this is a login attempt
-  if (request.method === "POST" && request.nextUrl.pathname === "/login") {
-    return NextResponse.next();
+  // API routes return 401 instead of redirect
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   // Redirect to login
-  if (request.nextUrl.pathname !== "/login") {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  return NextResponse.next();
+  return NextResponse.redirect(new URL("/login", request.url));
 }
 
 export const config = {
