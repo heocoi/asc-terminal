@@ -34,6 +34,7 @@ const SEVERITY_BORDER = {
 const TYPE_LABEL: Record<string, string> = {
   rejected: "Rejected",
   in_review: "In Review",
+  in_queue: "In Queue",
   bad_review: "Low Rating",
   anomaly: "Anomaly",
 };
@@ -41,6 +42,7 @@ const TYPE_LABEL: Record<string, string> = {
 const TYPE_STYLE: Record<string, string> = {
   rejected: "text-negative-text bg-negative-bg",
   in_review: "text-info-text bg-info-bg",
+  in_queue: "text-warning-text bg-warning-bg",
   bad_review: "text-warning-text bg-warning-bg",
   anomaly: "text-warning-text bg-warning-bg",
 };

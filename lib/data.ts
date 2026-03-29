@@ -561,7 +561,7 @@ export function getAlerts(apps: AppStatus[], sales: DailySales[]): AlertItem[] {
     // Waiting for review / in review (blue - informational)
     if (REVIEW_STATES.has(state)) {
       alerts.push({
-        type: "in_review",
+        type: state === "IN_REVIEW" ? "in_review" : "in_queue",
         severity: "blue",
         title: app.app.name,
         detail: `v${ver} - ${state === "IN_REVIEW" ? "In review" : "Waiting for review"}`,

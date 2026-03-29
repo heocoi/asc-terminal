@@ -210,7 +210,7 @@ export interface AnalyticsSetupStatus {
 }
 
 export interface AlertItem {
-  type: "rejected" | "in_review" | "bad_review" | "anomaly";
+  type: "rejected" | "in_review" | "in_queue" | "bad_review" | "anomaly";
   severity: "red" | "amber" | "blue";
   title: string;
   detail: string;
