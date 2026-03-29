@@ -18,7 +18,7 @@ export default function DashboardLayout({
               </svg>
             </div>
             <span className="text-sm font-bold tracking-tight text-text-primary">
-              ASC Terminal
+              Orchard
             </span>
           </Link>
 

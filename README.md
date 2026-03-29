@@ -1,4 +1,4 @@
-# ASC Terminal
+# Orchard
 
 Self-hosted App Store Connect dashboard for indie developers with app portfolios. Built as a replacement for ASC's analytics UI, which recently deprecated its portfolio-level Trends view.
 
@@ -35,7 +35,7 @@ No database. No third-party analytics. Your API keys stay on your Vercel instanc
 
 ## Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/phatle/asc-terminal&env=ASC_KEY_ID,ASC_ISSUER_ID,ASC_PRIVATE_KEY,ASC_VENDOR_NUMBER,DASHBOARD_PASSWORD&envDescription=App%20Store%20Connect%20API%20credentials&project-name=asc-terminal)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/heocoi/asc-terminal&env=ASC_KEY_ID,ASC_ISSUER_ID,ASC_PRIVATE_KEY,ASC_VENDOR_NUMBER,DASHBOARD_PASSWORD&envDescription=App%20Store%20Connect%20API%20credentials&project-name=orchard)
 
 ## Setup
 

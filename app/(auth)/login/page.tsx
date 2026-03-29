@@ -26,7 +26,7 @@ export default function Login() {
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-sm">
       <div className="rounded-lg border border-border bg-surface p-6">
-        <h1 className="text-lg font-semibold">ASC Terminal</h1>
+        <h1 className="text-lg font-semibold">Orchard</h1>
         <p className="mt-1 text-sm text-text-tertiary">
           Enter your password to continue
         </p>

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ASC Terminal",
-  description: "App Store Connect Analytics Terminal",
+  title: "Orchard",
+  description: "Self-hosted App Store Connect dashboard",
 };
 
 export default function RootLayout({
