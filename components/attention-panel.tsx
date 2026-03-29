@@ -159,7 +159,7 @@ export function AttentionPanel({
       {visibleReviews.map((review) => {
         const key = reviewKey(review);
         return (
-          <Link key={key} href={`/app/${review.appId}`} className="group block">
+          <Link key={key} href={review.appId ? `/app/${review.appId}` : "/"} className="group block">
             <div className="card flex items-center gap-4 rounded-xl border-l-[3px] border-l-warning px-4 py-3 transition-all hover:border-l-[4px] hover:shadow-sm">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">

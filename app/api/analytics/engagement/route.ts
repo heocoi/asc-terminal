@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAppsData, getEngagementData } from "@/lib/data";
-import { getReportRequests } from "@/lib/analytics-reports";
 
-// GET: Fetch engagement summary (impressions, conversion rate) for all analytics-enabled apps
+// GET: Fetch engagement summary (impressions, conversion rate) for all apps
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const days = Math.min(Math.max(parseInt(url.searchParams.get("days") ?? "30", 10) || 30, 1), 90);
@@ -11,15 +10,11 @@ export async function GET(req: Request) {
     const apps = await getAppsData();
     const summaries: Record<string, { impressions: number; pageViews: number; conversionRate: number }> = {};
 
-    // Only fetch for apps with active analytics
+    // getEngagementData internally checks for ONGOING requests - returns [] if none
     for (let i = 0; i < apps.length; i += 5) {
       const batch = apps.slice(i, i + 5);
       const results = await Promise.allSettled(
         batch.map(async (app) => {
-          const requests = await getReportRequests(app.app.id);
-          const hasActive = requests.some((r) => r.accessType === "ONGOING" && !r.stoppedDueToInactivity);
-          if (!hasActive) return null;
-
           const data = await getEngagementData(app.app.id, days);
           if (data.length === 0) return null;
 
@@ -47,7 +42,7 @@ export async function GET(req: Request) {
     return NextResponse.json(summaries, {
       headers: { "Cache-Control": "s-maxage=21600, stale-while-revalidate=3600" },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({}, { status: 500 });
   }
 }

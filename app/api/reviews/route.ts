@@ -21,23 +21,28 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "appId required" }, { status: 400 });
   }
 
-  const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 50);
+  const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10", 10) || 10, 1), 50);
 
-  const res = (await fetchReviews(appId, limit)) as { data: ASCReviewData[] };
+  try {
+    const res = (await fetchReviews(appId, limit)) as { data: ASCReviewData[] };
 
-  const reviews: Review[] = (res.data || []).map((r) => ({
-    id: r.id,
-    title: r.attributes.title,
-    body: r.attributes.body,
-    rating: r.attributes.rating,
-    reviewerNickname: r.attributes.reviewerNickname,
-    createdDate: r.attributes.createdDate,
-    territory: r.attributes.territory,
-  }));
+    const reviews: Review[] = (res.data || []).map((r) => ({
+      id: r.id,
+      title: r.attributes.title,
+      body: r.attributes.body,
+      rating: r.attributes.rating,
+      reviewerNickname: r.attributes.reviewerNickname,
+      createdDate: r.attributes.createdDate,
+      territory: r.attributes.territory,
+    }));
 
-  return NextResponse.json(reviews, {
-    headers: {
-      "Cache-Control": "s-maxage=3600, stale-while-revalidate=1800",
-    },
-  });
+    return NextResponse.json(reviews, {
+      headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=1800" },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to fetch reviews" },
+      { status: 500 }
+    );
+  }
 }

@@ -6,7 +6,9 @@ const PUBLIC_PATHS = new Set(["/login", "/api/auth"]);
 function getSecret() {
   const password = process.env.DASHBOARD_PASSWORD;
   if (!password) return null;
-  return new TextEncoder().encode(password);
+  // Use dedicated JWT_SECRET if set, otherwise derive from password + static salt
+  const raw = process.env.JWT_SECRET || `orchard:${password}:session-signing-key`;
+  return new TextEncoder().encode(raw);
 }
 
 export async function middleware(request: NextRequest) {

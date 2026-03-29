@@ -59,9 +59,9 @@ export function AppDetailView({
 }) {
   const [period, setPeriod] = useState<number>(30);
 
-  // Slice data for selected period
+  // Slice data for selected period + equal-length previous period for comparison
   const currentSlice = allSales.slice(-period);
-  const prevSlice = allSales.slice(0, -period);
+  const prevSlice = allSales.slice(-period * 2, -period);
 
   // Build single-app sales for chart
   const sales: DailySales[] = currentSlice.map((day) => {
