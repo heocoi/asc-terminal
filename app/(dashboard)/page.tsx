@@ -2,6 +2,7 @@ import { RevenueTicker } from "@/components/revenue-ticker";
 import { AttentionPanel } from "@/components/attention-panel";
 import { AppList } from "@/components/app-list";
 import { TrendChart } from "@/components/trend-chart";
+import { SubscriptionSummary } from "@/components/subscription-summary";
 import { getSalesData, getAppsData, getAlerts, getRecentBadReviews, getAppStoreData, getDashboardPricing, mergeSalesWithApps } from "@/lib/data";
 
 export default async function Dashboard() {
@@ -27,6 +28,7 @@ export default async function Dashboard() {
       <AttentionPanel alerts={alerts} badReviews={badReviews} />
       <AppList apps={apps} sales={sales} icons={storeData.icons} ratings={storeData.ratings} pricingModels={pricingModels} />
       <TrendChart data={sales} />
+      <SubscriptionSummary sales={sales} />
     </div>
   );
 }

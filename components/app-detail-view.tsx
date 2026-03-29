@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TrendChart } from "@/components/trend-chart";
 import { CountryBreakdown } from "@/components/country-breakdown";
+import { SubscriptionChart } from "@/components/subscription-chart";
 import type { DailySales, EngagementMetrics, SubscriptionEventMetrics, SubscriptionStateMetrics } from "@/lib/types";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -244,6 +245,8 @@ export function AppDetailView({
       {(subState.length > 0 || subEvents.length > 0) && (
         <div className="animate-fade-up space-y-3" style={{ animationDelay: "0.16s" }}>
           <h3 className="section-label">Subscription Analytics</h3>
+
+          {/* Metric cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {subState.length > 0 && (() => {
               const latest = subState[subState.length - 1];
@@ -304,6 +307,9 @@ export function AppDetailView({
               );
             })()}
           </div>
+
+          {/* Subscription trend chart */}
+          <SubscriptionChart stateData={subState} eventData={subEvents} />
         </div>
       )}
     </>
