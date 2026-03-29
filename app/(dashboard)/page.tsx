@@ -33,12 +33,12 @@ export default async function Dashboard() {
       {/* Q3: "What's the trend?" - pattern recognition */}
       <TrendChart data={sales} />
 
-      {/* Q4: "How's each app?" - drill-down */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      {/* Revenue breakdown + portfolio drill-down */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3">
           <AppList apps={apps} sales={sales} icons={storeData.icons} ratings={storeData.ratings} pricingModels={pricingModels} />
         </div>
-        <div>
+        <div className="lg:col-span-2">
           <SubscriptionSummary sales={sales} />
         </div>
       </div>

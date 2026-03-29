@@ -242,6 +242,12 @@ export function AppList({
   const active = rows.filter((r) => r.hasActivity);
   const inactive = rows.filter((r) => !r.hasActivity);
 
+  // Split active: apps with revenue (signal) vs downloads-only (lower signal)
+  const withRevenue = active.filter((r) => r.revenue > 0);
+  const downloadsOnly = active.filter((r) => r.revenue === 0);
+  const [showMore, setShowMore] = useState(false);
+  const hasCollapsible = downloadsOnly.length > 0 || inactive.length > 0;
+
   return (
     <div className="animate-fade-up" style={{ animationDelay: "0.12s" }}>
       <div className="mb-3 flex items-center justify-between">
@@ -263,40 +269,51 @@ export function AppList({
         </div>
       </div>
 
-      {/* Active apps */}
+      {/* Apps with revenue - always visible */}
       <div className="card mt-1 divide-y divide-border rounded-xl">
-        {active.map((row) => (
+        {withRevenue.map((row) => (
           <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} conversionRate={engagement[row.app.app.id]?.conversionRate} />
         ))}
-        {active.length === 0 && (
+        {withRevenue.length === 0 && downloadsOnly.length === 0 && (
           <div className="px-4 py-8 text-center text-sm text-text-muted">
             No activity in this period
           </div>
         )}
       </div>
 
-      {/* Inactive apps - collapsible */}
-      {inactive.length > 0 && (
+      {/* Downloads-only + inactive - collapsible */}
+      {hasCollapsible && (
         <div className="mt-3">
           <button
-            onClick={() => setShowInactive(!showInactive)}
+            onClick={() => setShowMore(!showMore)}
             className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-xs font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-text-tertiary"
           >
             <span className="h-px flex-1 bg-border" />
-            <span>{inactive.length} inactive</span>
+            <span>{downloadsOnly.length + inactive.length} more apps</span>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
-              className={`transition-transform ${showInactive ? "rotate-180" : ""}`}>
+              className={`transition-transform ${showMore ? "rotate-180" : ""}`}>
               <path d="M2 3.5L5 6.5L8 3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="h-px flex-1 bg-border" />
           </button>
 
-          {showInactive && (
-            <div className="card mt-2 divide-y divide-border rounded-xl opacity-60">
-              {inactive.map((row) => (
-                <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} conversionRate={engagement[row.app.app.id]?.conversionRate} />
-              ))}
-            </div>
+          {showMore && (
+            <>
+              {downloadsOnly.length > 0 && (
+                <div className="card mt-2 divide-y divide-border rounded-xl">
+                  {downloadsOnly.map((row) => (
+                    <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} conversionRate={engagement[row.app.app.id]?.conversionRate} />
+                  ))}
+                </div>
+              )}
+              {inactive.length > 0 && (
+                <div className="card mt-2 divide-y divide-border rounded-xl opacity-60">
+                  {inactive.map((row) => (
+                    <AppRowItem key={row.app.app.id} row={row} icons={icons} ratings={ratings} pricingModel={pricingModels[row.app.app.id]} conversionRate={engagement[row.app.app.id]?.conversionRate} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
