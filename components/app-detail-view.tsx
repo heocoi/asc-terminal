@@ -72,31 +72,44 @@ export function AppDetailView({ allSales, appId }: { allSales: DailySales[]; app
   const prevSlice = allSales.slice(0, -period);
 
   // Build single-app sales for chart
-  const sales: DailySales[] = currentSlice.map((day) => ({
-    date: day.date,
-    apps: day.apps[appId] ? { [appId]: day.apps[appId] } : {},
-    totalDownloads: day.apps[appId]?.downloads ?? 0,
-    totalRevenue: day.apps[appId]?.revenue ?? 0,
-    totalProceeds: day.apps[appId]?.proceeds ?? 0,
-  }));
+  const sales: DailySales[] = currentSlice.map((day) => {
+    const app = day.apps[appId];
+    return {
+      date: day.date,
+      apps: app ? { [appId]: app } : {},
+      totalDownloads: app?.downloads ?? 0,
+      totalRevenue: app?.revenue ?? 0,
+      totalProceeds: app?.proceeds ?? 0,
+      totalRefunds: app?.refunds ?? 0,
+      totalSubscriptionRevenue: app?.subscriptionRevenue ?? 0,
+    };
+  });
 
   const totalProceeds = currentSlice.reduce((s, d) => s + (d.apps[appId]?.proceeds ?? 0), 0);
   const totalDownloads = currentSlice.reduce((s, d) => s + (d.apps[appId]?.downloads ?? 0), 0);
+  const totalSubRevenue = currentSlice.reduce((s, d) => s + (d.apps[appId]?.subscriptionRevenue ?? 0), 0);
+  const totalRefunds = currentSlice.reduce((s, d) => s + (d.apps[appId]?.refunds ?? 0), 0);
   const prevProceeds = prevSlice.reduce((s, d) => s + (d.apps[appId]?.proceeds ?? 0), 0);
   const prevDownloads = prevSlice.reduce((s, d) => s + (d.apps[appId]?.downloads ?? 0), 0);
+  const prevSubRevenue = prevSlice.reduce((s, d) => s + (d.apps[appId]?.subscriptionRevenue ?? 0), 0);
 
   const firstDate = currentSlice[0]?.date ?? "";
   const lastDate = currentSlice[currentSlice.length - 1]?.date ?? "";
   const dateRange = firstDate && lastDate ? `${fmtShort(firstDate)} - ${fmtShort(lastDate)}` : "";
 
   // Anomaly detection (always based on full data, not period)
-  const fullAppSales: DailySales[] = allSales.map((day) => ({
-    date: day.date,
-    apps: day.apps[appId] ? { [appId]: day.apps[appId] } : {},
-    totalDownloads: day.apps[appId]?.downloads ?? 0,
-    totalRevenue: day.apps[appId]?.revenue ?? 0,
-    totalProceeds: day.apps[appId]?.proceeds ?? 0,
-  }));
+  const fullAppSales: DailySales[] = allSales.map((day) => {
+    const app = day.apps[appId];
+    return {
+      date: day.date,
+      apps: app ? { [appId]: app } : {},
+      totalDownloads: app?.downloads ?? 0,
+      totalRevenue: app?.revenue ?? 0,
+      totalProceeds: app?.proceeds ?? 0,
+      totalRefunds: app?.refunds ?? 0,
+      totalSubscriptionRevenue: app?.subscriptionRevenue ?? 0,
+    };
+  });
   const anomalies = getAppAlerts(fullAppSales, appId);
 
   return (
@@ -133,7 +146,7 @@ export function AppDetailView({ allSales, appId }: { allSales: DailySales[]; app
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid gap-3 ${totalSubRevenue > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
           <div className="card rounded-xl px-5 py-4">
             <p className="section-label">Revenue</p>
             <div className="mt-2 flex items-baseline gap-2">
@@ -142,7 +155,26 @@ export function AppDetailView({ allSales, appId }: { allSales: DailySales[]; app
               </span>
               <DeltaBadge current={totalProceeds} previous={prevProceeds} />
             </div>
+            {totalRefunds > 0 && (
+              <p className="mt-1 text-[11px] text-negative-text">
+                -${totalRefunds.toFixed(2)} refunds
+              </p>
+            )}
           </div>
+          {totalSubRevenue > 0 && (
+            <div className="card rounded-xl px-5 py-4">
+              <p className="section-label">Subscriptions</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="font-mono text-2xl font-bold tabular-nums text-text-primary">
+                  ${totalSubRevenue.toFixed(2)}
+                </span>
+                <DeltaBadge current={totalSubRevenue} previous={prevSubRevenue} />
+              </div>
+              <p className="mt-1 text-[11px] text-text-muted">
+                {totalProceeds > 0 ? `${((totalSubRevenue / totalProceeds) * 100).toFixed(0)}% of revenue` : ""}
+              </p>
+            </div>
+          )}
           <div className="card rounded-xl px-5 py-4">
             <p className="section-label">Downloads</p>
             <div className="mt-2 flex items-baseline gap-2">

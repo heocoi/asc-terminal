@@ -106,7 +106,7 @@ export function mergeSalesWithApps(sales: DailySales[], apps: AppStatus[]): Dail
       const targetId = parentId ?? id;
 
       if (!merged[targetId]) {
-        merged[targetId] = { title: entry.title, downloads: 0, updates: 0, revenue: 0, proceeds: 0, countries: {} };
+        merged[targetId] = { title: entry.title, downloads: 0, updates: 0, revenue: 0, proceeds: 0, iapRevenue: 0, subscriptionRevenue: 0, refunds: 0, countries: {} };
       }
 
       const target = merged[targetId];
@@ -114,6 +114,9 @@ export function mergeSalesWithApps(sales: DailySales[], apps: AppStatus[]): Dail
       target.updates += entry.updates;
       target.revenue += entry.revenue;
       target.proceeds += entry.proceeds;
+      target.iapRevenue += entry.iapRevenue;
+      target.subscriptionRevenue += entry.subscriptionRevenue;
+      target.refunds += entry.refunds;
 
       // Merge country data
       if (entry.countries) {
@@ -134,13 +137,17 @@ export function mergeSalesWithApps(sales: DailySales[], apps: AppStatus[]): Dail
     let totalDownloads = 0;
     let totalRevenue = 0;
     let totalProceeds = 0;
+    let totalRefunds = 0;
+    let totalSubscriptionRevenue = 0;
     for (const entry of Object.values(merged)) {
       totalDownloads += entry.downloads;
       totalRevenue += entry.revenue;
       totalProceeds += entry.proceeds;
+      totalRefunds += entry.refunds;
+      totalSubscriptionRevenue += entry.subscriptionRevenue;
     }
 
-    return { date: day.date, apps: merged, totalDownloads, totalRevenue, totalProceeds };
+    return { date: day.date, apps: merged, totalDownloads, totalRevenue, totalProceeds, totalRefunds, totalSubscriptionRevenue };
   });
 }
 

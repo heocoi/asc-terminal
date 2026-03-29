@@ -76,6 +76,7 @@ interface AppRow {
   app: AppStatus;
   revenue: number;
   downloads: number;
+  subscriptionRevenue: number;
   sparkline: number[];
   hasActivity: boolean;
 }
@@ -91,12 +92,15 @@ function getAppRows(apps: AppStatus[], sales: DailySales[], days: number): AppRo
       const downloads = slice.reduce(
         (s, d) => s + (d.apps[app.app.id]?.downloads ?? 0), 0
       );
+      const subscriptionRevenue = slice.reduce(
+        (s, d) => s + (d.apps[app.app.id]?.subscriptionRevenue ?? 0), 0
+      );
       const sparkline = slice.map(
         (d) => d.apps[app.app.id]?.downloads ?? 0
       );
       const hasActivity = revenue > 0 || downloads > 0;
 
-      return { app, revenue, downloads, sparkline, hasActivity };
+      return { app, revenue, downloads, subscriptionRevenue, sparkline, hasActivity };
     })
     .sort((a, b) => b.revenue - a.revenue || b.downloads - a.downloads);
 }
@@ -185,11 +189,16 @@ function AppRowItem({
         }`}>
           {hasRevenue ? `$${row.revenue.toFixed(2)}` : "--"}
         </p>
-        <p className={`font-mono text-[11px] tabular-nums ${
+        <div className={`flex items-center justify-end gap-1 font-mono text-[11px] tabular-nums ${
           row.downloads > 0 ? "text-text-muted" : "text-text-faint"
         }`}>
+          {row.subscriptionRevenue > 0 && (
+            <svg width="10" height="10" viewBox="0 0 10 10" className="shrink-0 text-accent-text">
+              <path d="M7.5 3.5A3 3 0 0 0 2 4.5M2.5 6.5A3 3 0 0 0 8 5.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+          )}
           {row.downloads > 0 ? `${row.downloads} DLs` : ""}
-        </p>
+        </div>
       </div>
     </Link>
   );

@@ -105,6 +105,7 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
 
   const latestRevenue = lastDay.totalProceeds;
   const latestDownloads = lastDay.totalDownloads;
+  const latestRefunds = lastDay.totalRefunds;
   const prevDayRevenue = prevDay?.totalProceeds ?? 0;
   const prevDayDownloads = prevDay?.totalDownloads ?? 0;
 
@@ -157,6 +158,9 @@ export function RevenueTicker({ data }: { data: DailySales[] }) {
                 <span className="ml-1">
                   <DeltaBadge current={latestDownloads} previous={prevDayDownloads} />
                 </span>
+              )}
+              {latestRefunds > 0 && (
+                <span className="ml-1.5 text-negative-text">-${latestRefunds.toFixed(2)} refunds</span>
               )}
             </p>
           </div>

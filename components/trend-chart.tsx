@@ -11,7 +11,7 @@ const CHART_COLORS = [
 ];
 const OTHER_COLOR = "#D4CFC8";
 
-type Metric = "revenue" | "downloads";
+type Metric = "revenue" | "downloads" | "subscriptions";
 
 function CustomTooltip({ active, payload, label, metric }: {
   active?: boolean;
@@ -35,7 +35,7 @@ function CustomTooltip({ active, payload, label, metric }: {
             {entry.name}
           </span>
           <span className="font-mono font-semibold tabular-nums text-text-primary">
-            {metric === "revenue" ? `$${Number(entry.value).toFixed(2)}` : entry.value}
+            {(metric === "revenue" || metric === "subscriptions") ? `$${Number(entry.value).toFixed(2)}` : entry.value}
           </span>
         </div>
       ))}
@@ -43,7 +43,7 @@ function CustomTooltip({ active, payload, label, metric }: {
         <div className="mt-1.5 flex items-center justify-between border-t border-border pt-1.5 text-xs">
           <span className="font-medium text-text-tertiary">Total</span>
           <span className="font-mono font-bold tabular-nums text-text-primary">
-            {metric === "revenue" ? `$${total.toFixed(2)}` : total}
+            {(metric === "revenue" || metric === "subscriptions") ? `$${total.toFixed(2)}` : total}
           </span>
         </div>
       )}
@@ -53,6 +53,11 @@ function CustomTooltip({ active, payload, label, metric }: {
 
 export function TrendChart({ data }: { data: DailySales[] }) {
   const [metric, setMetric] = useState<Metric>("revenue");
+
+  // Check if any subscription revenue exists
+  const hasSubRevenue = data.some(d =>
+    Object.values(d.apps).some(app => app.subscriptionRevenue > 0)
+  );
 
   // Collect all apps
   const appIds = new Set<string>();
@@ -65,29 +70,39 @@ export function TrendChart({ data }: { data: DailySales[] }) {
   }
 
   // Sort by total, pick top 5, group rest as "Other"
+  const getMetricValue = (app: DailySales["apps"][string] | undefined): number => {
+    if (!app) return 0;
+    if (metric === "revenue") return app.proceeds;
+    if (metric === "subscriptions") return app.subscriptionRevenue;
+    return app.downloads;
+  };
+
   const sorted = [...appIds].sort((a, b) => {
-    const valA = data.reduce((sum, d) => sum + (metric === "revenue"
-      ? (d.apps[a]?.proceeds ?? 0) : (d.apps[a]?.downloads ?? 0)), 0);
-    const valB = data.reduce((sum, d) => sum + (metric === "revenue"
-      ? (d.apps[b]?.proceeds ?? 0) : (d.apps[b]?.downloads ?? 0)), 0);
+    const valA = data.reduce((sum, d) => sum + getMetricValue(d.apps[a]), 0);
+    const valB = data.reduce((sum, d) => sum + getMetricValue(d.apps[b]), 0);
     return valB - valA;
   });
 
-  const top5 = sorted.slice(0, 5);
-  const rest = sorted.slice(5);
+  // For subscriptions, filter out apps with no sub revenue
+  const filteredSorted = metric === "subscriptions"
+    ? sorted.filter(id => data.some(d => (d.apps[id]?.subscriptionRevenue ?? 0) > 0))
+    : sorted;
+
+  const top5 = filteredSorted.slice(0, 5);
+  const rest = filteredSorted.slice(5);
   const hasOther = rest.length > 0;
+
+  const isMoney = metric === "revenue" || metric === "subscriptions";
 
   const chartData = data.map((day) => {
     const entry: Record<string, string | number> = { date: day.date.slice(5) };
     for (const id of top5) {
-      entry[id] = metric === "revenue"
-        ? +(day.apps[id]?.proceeds ?? 0).toFixed(2)
-        : (day.apps[id]?.downloads ?? 0);
+      const val = getMetricValue(day.apps[id]);
+      entry[id] = isMoney ? +val.toFixed(2) : val;
     }
     if (hasOther) {
-      entry["__other"] = rest.reduce((s, id) => s + (metric === "revenue"
-        ? (day.apps[id]?.proceeds ?? 0) : (day.apps[id]?.downloads ?? 0)), 0);
-      if (metric === "revenue") entry["__other"] = +Number(entry["__other"]).toFixed(2);
+      entry["__other"] = rest.reduce((s, id) => s + getMetricValue(day.apps[id]), 0);
+      if (isMoney) entry["__other"] = +Number(entry["__other"]).toFixed(2);
     }
     return entry;
   });
@@ -99,33 +114,26 @@ export function TrendChart({ data }: { data: DailySales[] }) {
       {/* Header with toggle */}
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex gap-0.5 rounded-lg bg-surface-inset p-0.5">
-          <button
-            onClick={() => setMetric("revenue")}
-            className={`rounded-md px-3 py-1 text-xs font-semibold transition-all ${
-              metric === "revenue"
-                ? "bg-surface text-text-primary shadow-sm"
-                : "text-text-muted hover:text-text-secondary"
-            }`}
-          >
-            Revenue
-          </button>
-          <button
-            onClick={() => setMetric("downloads")}
-            className={`rounded-md px-3 py-1 text-xs font-semibold transition-all ${
-              metric === "downloads"
-                ? "bg-surface text-text-primary shadow-sm"
-                : "text-text-muted hover:text-text-secondary"
-            }`}
-          >
-            Downloads
-          </button>
+          {(["revenue", "downloads", ...(hasSubRevenue ? ["subscriptions" as const] : [])] as Metric[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMetric(m)}
+              className={`rounded-md px-3 py-1 text-xs font-semibold capitalize transition-all ${
+                metric === m
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-muted hover:text-text-secondary"
+              }`}
+            >
+              {m}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Chart */}
       <div className="px-3 pb-4">
         <ResponsiveContainer width="100%" height={220}>
-          {metric === "revenue" ? (
+          {isMoney ? (
             <AreaChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis

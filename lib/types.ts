@@ -35,6 +35,9 @@ export interface AppDaySales {
   updates: number;
   revenue: number;
   proceeds: number;
+  iapRevenue: number;
+  subscriptionRevenue: number;
+  refunds: number; // absolute value of refunded proceeds
   parentSku?: string;
   customerPrice?: number; // base app price from most recent download transaction
   customerCurrency?: string;
@@ -47,6 +50,8 @@ export interface DailySales {
   totalDownloads: number;
   totalRevenue: number;
   totalProceeds: number;
+  totalRefunds: number;
+  totalSubscriptionRevenue: number;
 }
 
 export interface AppInfo {
